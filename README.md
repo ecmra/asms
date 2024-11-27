@@ -1,8 +1,27 @@
-ASMS manual
-===========
+ASMS
+====
+
+
+# Installation
+
+1. `git clone  git@github.com:ecmra/asms.git`
+2. install rust following https://www.rust-lang.org/tools/install
+
+(this typically boils down to 
+
+`curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
+
+)
+
+3. `cd asms`
+
+4. `cargo build -r`
+
+the executable is in `asms/target/release/asms`
 
 
 # Introduction
+
 
 `asms` scans mapped reads from diploid genomes  searching for allele specific methylation, 
 with the help of known genetic variants or simply by looking at methylation patterns. 
