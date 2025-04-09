@@ -38,7 +38,7 @@ patterns appearing on the reads themselves.
 ## Selecting interesting regions with `scan`
 
 ```
-asms scan [--nadj][--merge_distance][--region] <file.bed.gz> <outdir>
+asms scan [--nadj][--merge_distance][--region][--lower-bound][--upper-bound] <file.bed.gz> <outdir>
 ```
 
 where `file.bed.gz` is a 
@@ -62,15 +62,24 @@ imprinting control region on chr15.
 ![example of output of asms scan: part of the imprinting control region for the SNURF gene.\label{intermediate}](./figures/snurf.png)
 
 
-### OPTIONS
+```
+OPTIONS:
+--lower-bound    <float in [0,1] default=0.4>
+--upper-bound    <float in [0,1] default=0.6>
+                 intermediate regions are defined as having methylation
+                 between lower bound and upper bound.
+--merge-distance <DISTANCE(bp)>
+                 merge intermediate regions at less then this distance
+                 (default=1000)
+--nadj           <NCPGS>
+                 minimum number of adjacent CpGs with intermediate methylation
+                 to call an intermediate region.
+                 (default=3)
+--region         <CONTIG:NUM-NUM>
+                 only look at specific region 
+```
 
-`--nadj`               `<integer>`           there must be at least `nadj` adjacent CpGs with 
-                                                intermediate methylation to call a region.
 
-`--merge_distance`   `<integer>`           regions will be merged if they are closer than
-                                               the merge distance.
-
-`--region`             `<chr:start-stop>`     perform the scan only in the specified genomic stretch.      
 
 
 
@@ -80,7 +89,7 @@ After generating a list of intermediate regions, one can cluster the reads mappi
 them using
 
 ```
-asms cluster <bedfn> <bamfn> <reference> <outdir> 
+asms cluster [--seed][--maxit] <bedfn> <bamfn> <reference> <outdir> 
 ```
 
 the command line arguments are as follows:
@@ -97,15 +106,22 @@ used in creating the `CRAM`.
 plus a file in `outdir/` called `stats-summary.txt` which 
 contain descriptive statistics for each locus which has been clustered.
 
+```
+OPTIONS:
+--seed           <u64>
+                 seed for the random number generator 
+                 (to initialize clustering)
 
-
+--maxit          <u16>
+                 max number of EM iterations (default=10)
+```
 
 ## filter
 
 After clustering the last step is listing the putative allele specific methylation regions.
 the command line is:
 
-`asm <bedfn> <outdir>` where `<bedfn>` typically has been created by a previous `asms scan` command
+`filter <bedfn> <outdir>` where `<bedfn>` typically has been created by a previous `asms scan` command
 (which by default writes `merged-im.bed`) and   `<outdir>` contains the `stats` subdirectory written by
 `asms cluster`.
 the output of asm is in `<outdir>/asm.bed` 
@@ -125,9 +141,23 @@ See figure\ref{asm} for an example of methylation values in selected ASM regions
 
 ## scan-vcf
 
+
+`scan-vcf [--lower-bound][--upper-bound][--region] <vcf> <methfn> <outdir>`
+
 checks a list of known variants (in a `.vcf` file) and prints out a region surronding
 SNPs falling in a locus where methylation is intermediate.
 Regions obtained in this way can be used for clustering and asm-calling.
+
+```
+OPTIONS:
+--lower-bound    <float in [0,1] default=0.4>
+--upper-bound    <float in [0,1] default=0.6>
+                 intermediate regions are defined as having methylation
+                 between lower bound and upper bound.
+--region         <CONTIG:NUM-NUM>
+                 only look at specific region
+```
+
 
 
 # More details on the subcommands
