@@ -5,16 +5,8 @@ ASMS
 # Installation
 
 1. `git clone  git@github.com:ecmra/asms.git`
-2. install rust following https://www.rust-lang.org/tools/install
-
-(this typically boils down to 
-
-`curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
-
-)
-
+2. install rust as explained in https://www.rust-lang.org/tools/install
 3. `cd asms`
-
 4. `cargo build -r`
 
 the executable is in `asms/target/release/asms`
@@ -26,9 +18,9 @@ the executable is in `asms/target/release/asms`
 `asms` scans mapped reads from diploid genomes  searching for allele specific methylation, 
 with the help of known genetic variants or simply by looking at methylation patterns. 
 Reads must contain methylation information encoded with MM/ML tags
-(see [SAM tags sepc]()).
+(see [SAM tags spec]()).
 An `asms` workflow starts by  selecting a number of regions at intermediate methylation values,
-then it tries to cluster the reads on those loci in two groups based on the methylation
+followed by clustering the reads on those loci in two groups based on the methylation
 patterns appearing on the reads themselves.
 
 `asms` has 4 subcommands: `scan`,  `cluster`, `filter` and `scan-vcf`.
