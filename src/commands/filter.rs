@@ -11,9 +11,9 @@ use crate::utils;
 
 /// read summary stats and use them to define asms
 pub fn filter(args: &[String]) {
-    let usage = "usage: asm <outdir>
+    let usage = "usage: filter <outdir>
 <outdir>         directory which contains the stats subdirectory.
-                 the output of asm is in <outdir>/asm.bed 
+                 the output of filter is in <outdir>/asm.bed 
 ";
     if (args.len() < 1) || (args[0] == "-h") || (args[0] == "--help") {
         eprintln!("{}", usage);
