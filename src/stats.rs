@@ -22,10 +22,10 @@ pub struct Stats {
     pub median_meth0_notna: f32,
     pub median_meth1_notna: f32,
     pub n00:Vec<u16>,
-    pub n01:Vec<u16> ,
-    pub n10:Vec<u16> ,
-    pub n11:Vec<u16> ,
-    pub m0:Vec<f32> ,
+    pub n01:Vec<u16>,
+    pub n10:Vec<u16>,
+    pub n11:Vec<u16>,
+    pub m0:Vec<f32>,
     pub m1:Vec<f32>
 }
 
@@ -133,6 +133,9 @@ pub fn print_stats<W: std::io::Write>( s:&Stats, mut handle: BufWriter<W>)  {
     );
     utils::write_out( &mut handle,
         &format!("#@POP0:{}\n#@POP1:{}\n", s.pop0, s.pop1),
+    );
+    utils::write_out( &mut handle,
+        &format!("#GPOS\tN00\tN10\tM0\tN01\tN11\tM1\n"),
     );
     for j in 0..s.d {
         utils::write_out(

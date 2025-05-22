@@ -25,7 +25,7 @@ patterns appearing on the reads themselves.
 
 `asms` has 4 subcommands: `scan`,  `cluster`, `filter` and `scan-vcf`.
 
-# A simple worflow example
+# A simple workflow example
 
 ## Selecting interesting regions with `scan`
 
@@ -34,10 +34,10 @@ asms scan [--nadj][--merge_distance][--region][--lower-bound][--upper-bound] <fi
 ```
 
 where `file.bed.gz` is a 
-[bedmthyl](<https://www.encodeproject.org/data-standards/wgbs/>) 
+[bedmethyl](<https://www.encodeproject.org/data-standards/wgbs/>) 
 file compressed with `bgzip`  and indexed with `tabix` (hence there
 will be a file of the form `<file.bed.gz.tbi>` in the same directory).
-The `bedmethylfile` shoud not contain strand-spefific information; eg
+The `bedmethyl` file should not contain strand-specific information; _eg_
 if creating it with modkit, use the `--combine-strands` option; likewise,
 the file should only contain information about methylated CpGs.
 Loci which are not related to 5mC modifications are skipped; loci where the strand
@@ -48,10 +48,10 @@ might contain other temporary files useful for debugging or more in depth analys
 
 `<outdir>/merged-im.bed` has 5 columns; the first three are the coordinates for 
 an intermediate methylation region, followed by its length and the number of CpGs
-it contains. Fig.\ref{intermediate} shows a typical output, in this case part of an
+it contains. The figure below shows a typical output, in this case part of an
 imprinting control region on chr15.
 
-![example of output of asms scan: part of the imprinting control region for the SNURF gene.\label{intermediate}](./figures/snurf.png)
+![example of output of asms scan: part of the imprinting control region for the SNURF gene](./figures/snurf.png)
 
 
 ```
@@ -87,15 +87,14 @@ asms cluster [--seed][--maxit] <bedfn> <bamfn> <reference> <outdir>
 the command line arguments are as follows:
 
 where  `<bedfn>`  is a BED files containing regions for the clustering algorithm to work on
-(typically `merged-im.bed`). `<bamfn>` is the alignment file (BAM/CRAM);
+(typically `merged-im.bed`). `<bamfn>` is the BAM/CRAM alignment file ;
 `<reference>` is and  indexed FASTA reference and 
 the `<outdir>`  directory which will contain the clustering results.
 If alignments are contained in a `CRAM` file the reference must correspond to the one
 used in creating the `CRAM`.
 
 `asms cluster` will create 3 subdirectories of `outdir` called
-`outdir/matrices`, `outdir/clusters` and `outdir/stats` 
-plus a file in `outdir/` called `stats-summary.txt` which 
+`outdir/matrices`, `outdir/clusters` and `outdir/stats` ; it will also create a file in `outdir/` called `stats-summary.txt` which 
 contain descriptive statistics for each locus which has been clustered.
 
 ```
@@ -113,21 +112,19 @@ OPTIONS:
 After clustering the last step is listing the putative allele specific methylation regions.
 the command line is:
 
-`filter <bedfn> <outdir>` where `<bedfn>` typically has been created by a previous `asms scan` command
-(which by default writes `merged-im.bed`) and   `<outdir>` contains the `stats` subdirectory written by
-`asms cluster`.
-the output of asm is in `<outdir>/asm.bed` 
-
-This is a `BED9` file with the following header:
+`asms filter <outdir>` where    `<outdir>` contains the `stats` subdirectory written by
+`asms cluster` and the `merged-im.bed` file created by `asms scan`.
+`filter` wrotes to `<outdir>/asm.bed` , which is a `BED9` file with the following header:
 `chrom  chromStart      chromEnd        name    score(nCpG)     pop0    pop1    m0      m1`
 
-where `pop0, pop1` is the size of the two clusters of reads and `m0,m1` is the median methylation
+where `pop0, pop1` are the sizes of the two clusters of reads and `m0,m1` are the median methylation values
 in the two clusters. The `score(nCpg)` column counts the number of CpGs in each ASM region.
 
 
-See figure\ref{asm} for an example of methylation values in selected ASM regions.
+This figure below represents methylation values in some ASM regions found by
+`asms filter`..
 
-![Distribution of methylation values in putative ASMs\label{asm}](./figures/asm-density.eps)
+![Distribution of methylation values in putative ASMs](./figures/asm-density.png)
 
 
 
@@ -167,7 +164,7 @@ The subcommand `scan-vcf` writes to `stdout`.
 
 There are 2 python scripts in the `src/` directory (or bundled with the binary) which can be used 
 to plot the results of `asms`.
-Examples of a binarized matrix (fig.\ref{matrix}) and its corresponding clusters (fig.\ref{clusters}) 
+Examples of a binarized matrix  and its corresponding clusters  
 are shown below.
 
 ![matrix with binarized methylation data\label{matrix}](./figures/matrix.png) 

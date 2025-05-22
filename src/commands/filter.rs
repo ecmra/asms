@@ -19,13 +19,9 @@ pub fn filter(args: &[String]) {
         eprintln!("{}", usage);
         return;
     }
-    //let bedfn = &args[0];
     let outdir = &args[0];
-    //let summaryfn = &format!("{}/stats-summary.bed", outdir);
-    //let handle = BufWriter::new(File::create(summaryfn).unwrap());
-    //print_summary(bedfn, outdir, handle);
     let asmfn = &format!("{}/asm.bed", outdir);
-    let handleasm = BufWriter::new(File::create(asmfn).expect("==can't create asm.bed==\n"));
+    let handleasm = BufWriter::new(File::create(asmfn).expect(&format!("==can't create {}==\n", asmfn)));
     print_asm(outdir, handleasm);
 }
 
