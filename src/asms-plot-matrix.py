@@ -33,7 +33,7 @@ for i in range(maxridx+1):
     for j in range(maxgposidx+1):
         if (i,j) in dstate:
             m[i,j] = dstate[(i,j)]
-np.savetxt(sys.stdout, m)
+np.savetxt(sys.stdout, m, fmt="%.3f")
 
 
 cmap = ListedColormap(["gray", "orange", "blue"])

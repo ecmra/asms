@@ -1,3 +1,25 @@
+use std::collections::BTreeSet;
+use std::fs::File;
+use std::io::BufWriter;
+use std::io::BufRead;
+use std::io::BufReader;
+
+use crate::commands::cluster;
+use fxhash::FxHashMap;
+
+use rust_htslib::bam::IndexedReader;
+use rust_htslib::bam::Record;
+use rust_htslib::htslib::BAM_FDUP;
+use rust_htslib::htslib::BAM_FQCFAIL;
+use rust_htslib::htslib::BAM_FSECONDARY;
+use rust_htslib::htslib::BAM_FSUPPLEMENTARY;
+use rust_htslib::htslib::BAM_FUNMAP;
+
+use crate::utils;
+use rust_htslib::bam::ext::BamRecordExtensions;
+use rust_htslib::bam::Read;
+
+
 /// stores meth info, per read and per genomic position
 ///
 /// n: number of reads (rows)
@@ -22,18 +44,6 @@ pub struct Matrix {
     pub idxgpos: Vec<usize>,
     pub idxreads: Vec<usize>,
 }
-use crate::commands::cluster;
-use fxhash::FxHashMap;
-use rust_htslib::bam::IndexedReader;
-use rust_htslib::bam::Record;
-use rust_htslib::htslib::BAM_FDUP;
-use rust_htslib::htslib::BAM_FQCFAIL;
-use rust_htslib::htslib::BAM_FSECONDARY;
-use rust_htslib::htslib::BAM_FSUPPLEMENTARY;
-use rust_htslib::htslib::BAM_FUNMAP;
-use std::collections::BTreeSet;
-use std::fs::File;
-use std::io::BufWriter;
 
 /// create a matrix containing the methylation status
 ///
@@ -136,21 +146,21 @@ pub fn meth_of_bam(
 /// skip dubious reads
 ///
 /// based on flags, presence of MM, quality must be >= 10
-fn skip(record: &Record) -> bool {
+pub fn skip(record: &Record) -> bool {
     let flags = record.flags();
     let rname = std::str::from_utf8(record.qname()).unwrap();
     if flags & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FSUPPLEMENTARY | BAM_FQCFAIL | BAM_FDUP) as u16
         != 0
     {
-        eprintln!("skipping {} [flag:{}]", rname, flags);
+        eprintln!("skip:{} [flag:{}]", rname, flags);
         return true;
     }
     if !(record.aux(b"MM").is_ok() || record.aux(b"Mm").is_ok()) {
-        eprintln!("skipping read {} (no MM/ML aux tag)", rname);
+        eprintln!("skip:{} [no MM/ML aux tag]", rname);
         return true;
     }
     if record.mapq() < 10 {
-        eprintln!("skipping {} [qual:{}]", rname, record.mapq());
+        eprintln!("skip:{} [qual:{}]", rname, record.mapq());
         return true;
     }
     return false;
@@ -184,9 +194,6 @@ fn validate_cgmatch(gpos: i64, start: i64, end: i64, refseq: &[u8]) -> bool {
     }
     return check1 && check2;
 }
-use crate::utils;
-use rust_htslib::bam::ext::BamRecordExtensions;
-use rust_htslib::bam::Read;
 
 /// print matrix and return a matrix struct
 ///
@@ -285,8 +292,6 @@ fn make_matrix(contig: &String, gpos: &Vec<i64>, rnames: &Vec<String>, m: &Vec<f
     return matrix;
 }
 
-use std::io::BufRead;
-use std::io::BufReader;
 
  
 pub fn matrix_of_file(fname: &str) -> Matrix {

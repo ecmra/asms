@@ -18,7 +18,7 @@ the executable is in `asms/target/release/asms`
 `asms` scans mapped reads from diploid genomes  searching for allele specific methylation, 
 with the help of known genetic variants or simply by looking at methylation patterns. 
 Reads must contain methylation information encoded with MM/ML tags
-(see [SAM tags spec]()).
+(see [SAM tags spec](https://samtools.github.io/hts-specs/SAMtags.pdf)).
 An `asms` workflow starts by  selecting a number of regions at intermediate methylation values,
 followed by clustering the reads on those loci in two groups based on the methylation
 patterns appearing on the reads themselves.

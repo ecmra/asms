@@ -10,19 +10,13 @@ use std::io::BufWriter;
 use std::path::Path;
 use std::time;
 
-
 use rust_htslib::bam::IndexedReader;
-
-
 use rust_htslib::faidx;
 
 
 use libc;
 
-
-
 use fastrand;
-
 
 use crate::utils;
 use crate::stats;
@@ -53,7 +47,7 @@ pub struct Cluster {
 
 /// clusters reads in the loci specified in `bedfn`.
 ///
-/// Alignment and methylation information is taken from `bamfn`.
+/// Alignment and methylation information are taken from `bamfn`.
 /// `reference` is used to check for the presence of CG dinnucleotides
 /// in the reads and results are write in subdirectories of `outdir`.
 /// possible to cluster on a set of precomputed matrices)
