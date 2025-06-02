@@ -1,9 +1,12 @@
+
+use std::env;
+
 use rust_htslib::htslib::BAM_FDUP;
 use rust_htslib::htslib::BAM_FQCFAIL;
 use rust_htslib::htslib::BAM_FSECONDARY;
 use rust_htslib::htslib::BAM_FSUPPLEMENTARY;
 use rust_htslib::htslib::BAM_FUNMAP;
-
+use rust_htslib::bam::record::Aux;
 use rust_htslib::bam::IndexedReader;
 use rust_htslib::bam::Record;
 use rust_htslib::bam::Read;
@@ -11,12 +14,22 @@ use rust_htslib::bam::ext::BamRecordExtensions;
 
 use asms::matrix;
 
+fn get_MM<'a>(mm:&'a str, record:&'a Record) -> &'a str {
+    let mm = record.aux(b"Mm");
+    let mm = match mm {
+	Ok(Aux::String(mm)) => mm,
+	_ => ""
+    };
+    return mm;
+}
+
 fn main() {
-    let bamfn = "/home/ecmra/data/scan-chr6/AY7669-chr15.bam";
+    let cmdargs:Vec<String> = env::args().collect();
+    let bamfn = &cmdargs[1];
     let mut bamreader = IndexedReader::from_path(bamfn).unwrap();
-    let contig = "chr15";
-    let start = 1_000_000;
-    let end   = 50_000_000;
+    let contig = &cmdargs[2];
+    let start:i32 = cmdargs[3].parse().unwrap();
+    let end:i32   = cmdargs[4].parse().unwrap();
     bamreader.fetch((contig, start, end)).unwrap();
     let mut recordbuf = Record::new();
     while let Some(result) = bamreader.read(&mut recordbuf) {
@@ -27,7 +40,12 @@ fn main() {
 	let skip = matrix::skip(&record);
 	let isrev = record.is_reverse();
         let rname = std::str::from_utf8(record.qname()).unwrap();
-        let ap = record.aligned_pairs();
+	let mm = get_MM("MM", &record);
+	let mm = match mm {
+	    "" => get_MM("Mm", &record),
+	    _ => mm
+	};
+	let ap = record.aligned_pairs();
 	    let mods = match record.basemods_iter() {
 		Ok(mods) => mods,
 		Err(_) => {
@@ -37,9 +55,10 @@ fn main() {
 	    };
 	for res in mods {
             if let Ok((position, m)) = res {
-		println!("{rname}:{position}:{0}:{1}:{2}",
+		println!("{rname}:{position}:{0}:{1}:{2}:{3}:{4}",
+			 &mm[0..5],
 			 m.modified_base as u8 as char,
-			 m.qual, skip);
+			 m.qual, skip, isrev);
 	    }
 	}
     }
