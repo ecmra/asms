@@ -7,8 +7,7 @@ edition = "2021"
 
 [dependencies]
 libc = "0.2"
-#rust-htslib = {version="0.46", default-features = false}
-rust-htslib = {version="*", default-features = false}
+rust-htslib = {version="0.46", default-features = false}
 fxhash = "0.2.1"
 fastrand = "=2.1.0"
 
