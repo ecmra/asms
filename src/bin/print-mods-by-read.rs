@@ -1,21 +1,16 @@
 
 use std::env;
 
-use rust_htslib::htslib::BAM_FDUP;
-use rust_htslib::htslib::BAM_FQCFAIL;
-use rust_htslib::htslib::BAM_FSECONDARY;
-use rust_htslib::htslib::BAM_FSUPPLEMENTARY;
-use rust_htslib::htslib::BAM_FUNMAP;
 use rust_htslib::bam::record::Aux;
 use rust_htslib::bam::IndexedReader;
 use rust_htslib::bam::Record;
 use rust_htslib::bam::Read;
-use rust_htslib::bam::ext::BamRecordExtensions;
+
 
 use asms::matrix;
 
-fn get_MM<'a>(mm:&'a str, record:&'a Record) -> &'a str {
-    let mm = record.aux(b"Mm");
+fn get_mm<'a>(mm:&'a str, record:&'a Record) -> &'a str {
+    let mm = record.aux(mm.as_bytes());
     let mm = match mm {
 	Ok(Aux::String(mm)) => mm,
 	_ => ""
@@ -40,19 +35,18 @@ fn main() {
 	let skip = matrix::skip(&record);
 	let isrev = record.is_reverse();
         let rname = std::str::from_utf8(record.qname()).unwrap();
-	let mm = get_MM("MM", &record);
+	let mm = get_mm("MM", &record);
 	let mm = match mm {
-	    "" => get_MM("Mm", &record),
+	    "" => get_mm("Mm", &record),
 	    _ => mm
 	};
-	let ap = record.aligned_pairs();
-	    let mods = match record.basemods_iter() {
-		Ok(mods) => mods,
-		Err(_) => {
-		    println!("Failed to parse MM/ML aux tags in {}\n", rname);
-		    continue
-		}
-	    };
+	let mods = match record.basemods_iter() {
+	    Ok(mods) => mods,
+	    Err(_) => {
+		println!("Failed to parse MM/ML aux tags in {}\n", rname);
+		continue
+	    }
+	};
 	for res in mods {
             if let Ok((position, m)) = res {
 		println!("{rname}:{position}:{0}:{1}:{2}:{3}:{4}",
