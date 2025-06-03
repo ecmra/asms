@@ -117,7 +117,7 @@ OPTIONS:
     let _ = bamreader.set_reference(Path::new(reffn));
     let mut oldcontig = fstname.to_string();
     let mut reflen: usize = refreader.fetch_seq_len(&fstname) as usize;
-    let mut refseq: &[u8] = refreader.fetch_seq(&fstname, 0, reflen - 1).unwrap();
+    let mut refseq: Vec<u8> = refreader.fetch_seq(&fstname, 0, reflen - 1).unwrap();
     for line in bufreader.lines() {
         let line = line.unwrap();
         if line.starts_with("#") {
@@ -143,7 +143,7 @@ OPTIONS:
             eprintln!("loading:{}({}bp(s))", contig, reflen);
             refseq = refreader.fetch_seq(contig, 0, reflen - 1).unwrap();
         }
-        let m = matrix::meth_of_bam(&mut bamreader, region, outdir, refseq);
+        let m = matrix::meth_of_bam(&mut bamreader, region, outdir, &refseq);
         eprintln!("found {} reads, {} CpGs", m.n, m.d);
         if (0 == m.n) || (0 == m.d) {
             continue;

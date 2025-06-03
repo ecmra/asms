@@ -54,7 +54,7 @@ pub fn meth_of_bam(
     bamreader: &mut IndexedReader,
     r: cluster::Region,
     outdir: &str,
-    refseq: &[u8],
+    refseq: &Vec<u8>,
 ) -> Matrix {
     let mut discarded: u32 = 0;
     let contig = r.contig;
