@@ -32,8 +32,14 @@ fn main() {
             Ok(_) => &recordbuf,
             Err(_) => panic!("BAM parsing failed"),
         };
-	let skip = matrix::skip(&record);
-	let isrev = record.is_reverse();
+	let skip = match matrix::skip(&record) {
+	    true => "skip",
+	    false => ""
+	};
+	let isrev = match record.is_reverse(){
+	    true => "rev",
+	    false => "norev"
+	};
         let rname = std::str::from_utf8(record.qname()).unwrap();
 	let mm = get_mm("MM", &record);
 	let mm = match mm {
@@ -47,12 +53,14 @@ fn main() {
 		continue
 	    }
 	};
+	let mcodes:&[i32] = mods.recorded();
+	// this iterates over all the mods, including eg hydroxymethylation
 	for res in mods {
             if let Ok((position, m)) = res {
-		println!("{rname}:{position}:{0}:{1}:{2}:{3}:{4}",
+		println!("{rname}:{position}:{0}:{1}:{2}:{3}:{4}:{5}",
 			 &mm[0..5],
 			 m.modified_base as u8 as char,
-			 m.qual, skip, isrev);
+			 m.qual,  skip, isrev, mcodes.len());
 	    }
 	}
     }
