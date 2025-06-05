@@ -32,8 +32,8 @@ fn main() {
             Ok(_) => &recordbuf,
             Err(_) => panic!("BAM parsing failed"),
         };
-	let skip = match matrix::skip(&record) {
-	    true => "skip",
+	let rskip = match matrix::skip(&record) {
+	    true => "rskip",
 	    false => ""
 	};
 	let isrev = match record.is_reverse(){
@@ -46,6 +46,13 @@ fn main() {
 	    "" => get_mm("Mm", &record),
 	    _ => mm
 	};
+	/* mods has all the methods of an iterator,
+	   with item = Result<(i32 (pos), hts_base_mod)>
+	   plus extra methods to exctract info
+	   about how many and what type of
+	   modifications are recorded fot the record
+	   I am looking at 
+	*/
 	let mods = match record.basemods_iter() {
 	    Ok(mods) => mods,
 	    Err(_) => {
@@ -54,14 +61,38 @@ fn main() {
 	    }
 	};
 	let mcodes:&[i32] = mods.recorded();
-	// this iterates over all the mods, including eg hydroxymethylation
-	for res in mods {
-            if let Ok((position, m)) = res {
-		println!("{rname}:{position}:{0}:{1}:{2}:{3}:{4}:{5}",
-			 &mm[0..5],
-			 m.modified_base as u8 as char,
-			 m.qual,  skip, isrev, mcodes.len());
+	let mut implicit:bool = true;
+	// record value of implicit for m
+	for i in 0..mcodes.len(){
+	    let modtype = mods.query_type(mcodes[i]).unwrap();
+	    let canbase = modtype.canonical as char;
+	    if (modtype.canonical as char == 'C' &&
+		mcodes[i] as u8 as char == 'm'
+		&& modtype.implicit == 0) { implicit = false};
+	}
+	// here depending on implicit I can iterate in different ways
+	if implicit {
+	    // this iterates over methylated positions
+	    for res in mods {
+		if let Ok((position, m)) = res {
+		    if m.modified_base as u8 as char != 'm' { continue}
+		    println!("{rname}:{position}:{0}:{1}:{2}:{3}:{4}:{5}:{6}",
+			     &mm[0..5],
+			     m.modified_base as u8 as char,
+			     m.qual,  rskip, isrev,
+			     mcodes.len(), implicit);
+		}
 	    }
+	} else {
+	    // deal with implicit calls
+	    // first look at explicit calls
+	    let mut calls:Vec<(i32, hts_base_mod)> = vec![];
+	    for res in mods {
+		if let Ok((position, m)) = res {
+		    if m.modified_base as u8 as char == 'm' { calls.push(res) }
+		}
+	    }
+	    // add implicit calls
 	}
     }
 }
