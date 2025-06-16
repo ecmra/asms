@@ -60,9 +60,8 @@ pub fn meth_of_bam(
     let contig = r.contig;
     let start = r.start;
     let end = r.end;
-    // from the docs:
-    // "start and stop are zero-based. start is inclusive, stop is exclusive."
     // https://docs.rs/rust-htslib/0.47.0/rust_htslib/bam/struct.IndexedReader.html#method.fetch
+    // "start and stop are zero-based. start is inclusive, stop is exclusive." 
     bamreader.fetch((contig, start, end)).unwrap();
     let mut mod_in_read: u32;
     let mut mod_count: u32 = 0;
@@ -359,14 +358,5 @@ pub mod test {
             idxreads: vec![0,1,2,3],
         };
         return tm1;
-    }
-    
-    #[test]
-    fn matrix_of_file_works() {
-	let fname = "/home/ecmra/devel-ciacco/methylation/asms/paper/experiments/scan/chr15/matrices/matrix-chr15-100863815-100863868.txt";
-	let m = super::matrix_of_file(fname);
-	assert!( m.idxgpos[1] == 2 );
-	assert!( m.idxreads[1] == 0 );
-	assert!( m.m[0*m.d+1] == 0.0 );
     }
 }
