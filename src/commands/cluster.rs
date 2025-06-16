@@ -143,7 +143,7 @@ OPTIONS:
             eprintln!("loading:{}({}bp(s))", contig, reflen);
             refseq = refreader.fetch_seq(contig, 0, reflen - 1).unwrap();
         }
-        let m = matrix::meth_of_bam(&mut bamreader, region, outdir, refseq);
+        let m = matrix::matrix_of_bam(&mut bamreader, region, outdir, refseq);
         eprintln!("found {} reads, {} CpGs", m.n, m.d);
         if (0 == m.n) || (0 == m.d) {
             continue;

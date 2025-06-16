@@ -4,7 +4,6 @@ use std::io::BufWriter;
 use std::io::BufRead;
 use std::io::BufReader;
 
-use crate::commands::cluster;
 use fxhash::FxHashMap;
 
 use rust_htslib::bam::IndexedReader;
@@ -15,18 +14,19 @@ use rust_htslib::htslib::BAM_FSECONDARY;
 use rust_htslib::htslib::BAM_FSUPPLEMENTARY;
 use rust_htslib::htslib::BAM_FUNMAP;
 
+use crate::commands::cluster;
 use crate::utils;
+
 use rust_htslib::bam::ext::BamRecordExtensions;
 use rust_htslib::bam::Read;
-
 
 /// stores meth info, per read and per genomic position
 ///
 /// n: number of reads (rows)
 /// d: number of CpGs (columns)
 /// m: methylation state (-1:unknown,/0/1)
-/// gpos: Vec of d genomic coordinates, one per column
-/// rnames: Vec of n read names, one per row
+/// gpos: Vec<i64> of d genomic coordinates, one per column
+/// rnames: Vec<String> of n read names, one per row
 pub struct Matrix {
     pub contig: String,
     pub n: usize,
@@ -50,7 +50,7 @@ pub struct Matrix {
 /// of each CpG on each considered read.
 /// rows are reads, columns are genomic positions.
 /// the matrix is written in a file inside the `outdir` directory.
-pub fn meth_of_bam(
+pub fn matrix_of_bam(
     bamreader: &mut IndexedReader,
     r: cluster::Region,
     outdir: &str,
@@ -273,7 +273,8 @@ fn print_matrix<W: std::io::Write>(
     };
 }
 
-#[allow(dead_code)]
+
+/*
 fn make_matrix(contig: &String, gpos: &Vec<i64>, rnames: &Vec<String>, m: &Vec<f32>) -> Matrix {
     let n = rnames.len();
     let d = gpos.len();
@@ -290,8 +291,7 @@ fn make_matrix(contig: &String, gpos: &Vec<i64>, rnames: &Vec<String>, m: &Vec<f
     };
     return matrix;
 }
-
-
+*/
  
 pub fn matrix_of_file(fname: &str) -> Matrix {
     let bufreader = BufReader::new(File::open(fname).unwrap());
