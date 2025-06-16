@@ -3,6 +3,6 @@ pub mod utils;
 pub mod stats;
 pub mod matrix;
 pub mod prob;
-
+pub mod parsemod;
 
 
