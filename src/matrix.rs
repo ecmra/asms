@@ -99,20 +99,23 @@ pub fn matrix_of_bam(
         for res in mods {
             if let Ok((position, m)) = res {
                 let pos = position as i64;
-                if (rpos2gpos.contains_key(&pos)) && ('m' == m.modified_base as u8 as char) {
-                    let gpos = if isrev {
-                        rpos2gpos[&pos]
-                    } else {
-                        rpos2gpos[&pos] + 1
-                    };
-                    //eprintln!("rpos:{} gpos:{}", pos, gpos);
-                    if !validate_cgmatch(gpos, start, end, refseq) {
+                if (rpos2gpos.contains_key(&pos)) && (b'm' == m.modified_base as u8) {
+		    // rpos2gpos[&pos] is 0-based. change it to 1 based
+		    // for storage and printing.
+		    let gpos0 = rpos2gpos[&pos];
+		    let canbase = m.canonical_base as u8;
+		    let gpos1 = match (canbase, isrev) {
+			(b'C', false) | (b'G', true)  => gpos0 + 1,
+			(b'C', true)  | (b'G', false) => gpos0,
+			_ => panic!("can't process {:?}", (canbase, isrev)),
+		    };
+		    if !validate_cgmatch(gpos1, start, end, refseq) {
                         continue;
                     }
-                    cpg_gpos.push(gpos);
+                    cpg_gpos.push(gpos1);
                     cpg_read.push(rcount);
                     cpg_state.push(binarize(m.qual.try_into().unwrap(), 127, 127));
-                    cpg_gpos_set.insert(gpos);
+                    cpg_gpos_set.insert(gpos1);
                     mod_in_read += 1;
                     mod_count += 1
                 }
@@ -178,18 +181,18 @@ fn binarize(meth: u8, lb: u8, ub: u8) -> i8 {
     if meth > ub {
         return 1;
     }
-    panic!("error: illegal meth score:{}\n", meth);
+    panic!("error: invalid meth score:{}\n", meth);
 }
 
-/// check that a given gpos corresponds to a CG on the reference
-fn validate_cgmatch(gpos: i64, start: i64, end: i64, refseq: &[u8]) -> bool {
-    let check1: bool = gpos >= start && gpos <= end;
-    let check2: bool;
-    // gpos is 0-based
-    if (gpos > 0) && (gpos < refseq.len() as i64) {
-        check2 = b'C' == refseq[(gpos - 1) as usize] && b'G' == refseq[gpos as usize];
-    } else {
-        check2 = false;
+/// check that a given 1-based gpos corresponds to a CG on the reference
+/// gpos1 is 1-based, start and end are 0-based
+fn validate_cgmatch(gpos1: i64, start: i64, end: i64, refseq: &[u8]) -> bool {
+    let check1: bool = gpos1 > start && gpos1 <= end;
+    let mut check2: bool = false;
+    if (gpos1 >= 1) && (gpos1 <= refseq.len() as i64) {
+	let gpos0 = gpos1-1;
+	check2 = (b'C' == refseq[gpos0 as usize]) &&
+	    (b'G' == refseq[ (gpos0+1) as usize]);
     }
     return check1 && check2;
 }
@@ -292,7 +295,8 @@ fn make_matrix(contig: &String, gpos: &Vec<i64>, rnames: &Vec<String>, m: &Vec<f
     return matrix;
 }
 */
- 
+
+/// parse matrix from text file
 pub fn matrix_of_file(fname: &str) -> Matrix {
     let bufreader = BufReader::new(File::open(fname).unwrap());
     let mut fields: Vec<&str>;
