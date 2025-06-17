@@ -1,8 +1,8 @@
 use std::collections::BTreeSet;
 use std::fs::File;
-use std::io::BufWriter;
 use std::io::BufRead;
 use std::io::BufReader;
+use std::io::BufWriter;
 
 use fxhash::FxHashMap;
 
@@ -14,11 +14,14 @@ use rust_htslib::htslib::BAM_FSECONDARY;
 use rust_htslib::htslib::BAM_FSUPPLEMENTARY;
 use rust_htslib::htslib::BAM_FUNMAP;
 
-use crate::commands::cluster;
-use crate::utils;
 
 use rust_htslib::bam::ext::BamRecordExtensions;
 use rust_htslib::bam::Read;
+
+use crate::commands::cluster;
+use crate::utils;
+use crate::parsemod;
+
 
 /// stores meth info, per read and per genomic position
 ///
@@ -34,10 +37,10 @@ pub struct Matrix {
     pub m: Vec<f32>,
     pub gpos: Vec<i64>,
     pub rnames: Vec<String>,
-    /* 
+    /*
     m is a sparse matrix (where absence is coded as -1).
     idxgpos, idxreads store (in parallel) the columns, rows
-    of the stored values (different from -1). 
+    of the stored values (different from -1).
     indexing is row-wise similar to C,
     so position (i,j) maps to index i*m.d+j
      */
@@ -61,7 +64,7 @@ pub fn matrix_of_bam(
     let start = r.start;
     let end = r.end;
     // https://docs.rs/rust-htslib/0.47.0/rust_htslib/bam/struct.IndexedReader.html#method.fetch
-    // "start and stop are zero-based. start is inclusive, stop is exclusive." 
+    // "start and stop are zero-based. start is inclusive, stop is exclusive."
     bamreader.fetch((contig, start, end)).unwrap();
     let mut mod_in_read: u32;
     let mut mod_count: u32 = 0;
@@ -90,35 +93,32 @@ pub fn matrix_of_bam(
         for p2 in ap {
             rpos2gpos.insert(p2[0], p2[1]);
         }
-        let mods = match record.basemods_iter() {
-            Ok(mods) => mods,
-            Err(_) => panic!("Failed to parse MM/ML aux tags in {}\n", rname),
-        };
         // iterate over the modifications in this record
         mod_in_read = 0;
-        for res in mods {
-            if let Ok((position, m)) = res {
-                let pos = position as i64;
-                if (rpos2gpos.contains_key(&pos)) && (b'm' == m.modified_base as u8) {
-		    // rpos2gpos[&pos] is 0-based. change it to 1 based
-		    // for storage and printing.
-		    let gpos0 = rpos2gpos[&pos];
-		    let canbase = m.canonical_base as u8;
-		    let gpos1 = match (canbase, isrev) {
-			(b'C', false) | (b'G', true)  => gpos0 + 1,
-			(b'C', true)  | (b'G', false) => gpos0,
-			_ => panic!("can't process {:?}", (canbase, isrev)),
-		    };
-		    if !validate_cgmatch(gpos1, start, end, refseq) {
-                        continue;
-                    }
-                    cpg_gpos.push(gpos1);
-                    cpg_read.push(rcount);
-                    cpg_state.push(binarize(m.qual.try_into().unwrap(), 127, 127));
-                    cpg_gpos_set.insert(gpos1);
-                    mod_in_read += 1;
-                    mod_count += 1
+        let mut calls = vec![];
+        parsemod::parse_mods(&record, &mut calls);
+        calls.sort_by(|c1, c2| c1.0.cmp(&c2.0));
+        for res in calls {
+            let pos = res.0 as i64;
+            let m = res.1;
+            if (rpos2gpos.contains_key(&pos)) && (b'm' == m.modified_base as u8) {
+                // rpos2gpos[&pos] is 0-based. change it to 1 based
+                // for storage and printing.
+                let gpos0 = rpos2gpos[&pos];
+                let canbase = m.canonical_base as u8;
+                let gpos1 = match (canbase, isrev) {
+                    (b'C', false) | (b'G', true) => gpos0 + 1,
+                    (b'C', true) | (b'G', false) => gpos0,
+                    _ => panic!("can't process {:?}", (canbase, isrev)),
+                };
+                if !validate_cgmatch(gpos1, start, end, refseq) {
+                    continue;
                 }
+                cpg_gpos.push(gpos1); cpg_read.push(rcount);
+                let mqual = m.qual as u8;
+                cpg_state.push(binarize(mqual, 127, 127));
+                cpg_gpos_set.insert(gpos1);
+                mod_in_read += 1;  mod_count += 1
             }
         }
         if mod_in_read > 0 {
@@ -190,9 +190,8 @@ fn validate_cgmatch(gpos1: i64, start: i64, end: i64, refseq: &[u8]) -> bool {
     let check1: bool = gpos1 > start && gpos1 <= end;
     let mut check2: bool = false;
     if (gpos1 >= 1) && (gpos1 <= refseq.len() as i64) {
-	let gpos0 = gpos1-1;
-	check2 = (b'C' == refseq[gpos0 as usize]) &&
-	    (b'G' == refseq[ (gpos0+1) as usize]);
+        let gpos0 = gpos1 - 1;
+        check2 = (b'C' == refseq[gpos0 as usize]) && (b'G' == refseq[(gpos0 + 1) as usize]);
     }
     return check1 && check2;
 }
@@ -276,7 +275,6 @@ fn print_matrix<W: std::io::Write>(
     };
 }
 
-
 /*
 fn make_matrix(contig: &String, gpos: &Vec<i64>, rnames: &Vec<String>, m: &Vec<f32>) -> Matrix {
     let n = rnames.len();
@@ -300,33 +298,35 @@ fn make_matrix(contig: &String, gpos: &Vec<i64>, rnames: &Vec<String>, m: &Vec<f
 pub fn matrix_of_file(fname: &str) -> Matrix {
     let bufreader = BufReader::new(File::open(fname).unwrap());
     let mut fields: Vec<&str>;
-    let mut idxreads:Vec<usize> = vec![];
-    let mut idxgpos:Vec<usize> = vec![];
-    let mut rnames:Vec<String> = vec![];
-    let mut gpos:Vec<i64> = vec![];
+    let mut idxreads: Vec<usize> = vec![];
+    let mut idxgpos: Vec<usize> = vec![];
+    let mut rnames: Vec<String> = vec![];
+    let mut gpos: Vec<i64> = vec![];
     let md = utils::read_metadata(fname);
     let n = md["N"].parse::<usize>().unwrap();
     let d = md["D"].parse::<usize>().unwrap();
     let contig = md["CONTIG"].to_string();
-    let mut m:Vec<f32> = vec![ -1.0; n*d ];
-    for line in bufreader.lines(){
-	let s = line.unwrap();
-	if &s[0..2] == "#@" {continue;}
-	fields = s.split('\t').collect();
-	let idxr = fields[0].parse::<usize>().unwrap();
-	idxreads.push(idxr);
-	if !( rnames.contains(&fields[1].to_string())) {
-	    rnames.push(fields[1].to_string());
-	}
-	let idxg = fields[2].parse::<usize>().unwrap();
-	idxgpos.push(idxg);
-	if !( gpos.contains(&fields[3].parse::<i64>().unwrap())) {
-	    gpos.push(fields[3].parse::<i64>().unwrap());
-	}
-	m[idxr*d+idxg] = fields[4].parse::<f32>().unwrap();
+    let mut m: Vec<f32> = vec![-1.0; n * d];
+    for line in bufreader.lines() {
+        let s = line.unwrap();
+        if &s[0..2] == "#@" {
+            continue;
+        }
+        fields = s.split('\t').collect();
+        let idxr = fields[0].parse::<usize>().unwrap();
+        idxreads.push(idxr);
+        if !(rnames.contains(&fields[1].to_string())) {
+            rnames.push(fields[1].to_string());
+        }
+        let idxg = fields[2].parse::<usize>().unwrap();
+        idxgpos.push(idxg);
+        if !(gpos.contains(&fields[3].parse::<i64>().unwrap())) {
+            gpos.push(fields[3].parse::<i64>().unwrap());
+        }
+        m[idxr * d + idxg] = fields[4].parse::<f32>().unwrap();
     }
     let m = Matrix {
-	contig:contig,
+        contig: contig,
         n: n,
         d: d,
         m: m,
@@ -346,10 +346,8 @@ pub mod test {
             n: 4,
             d: 5,
             m: vec![
-                0.0, 1.0, 0.0, 1.0, 0.0,
-		1.0, 0.0, 1.0, 0.0, 1.0,
-		0.0, 1.0, 0.0, 1.0, 0.0,
-		1.0, 0.0, 1.0, 0.0, 1.0,
+                0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0,
+                0.0, 1.0, 0.0, 1.0,
             ],
             gpos: vec![1, 2, 3, 4, 5],
             rnames: vec![
@@ -358,8 +356,8 @@ pub mod test {
                 "r3".to_string(),
                 "r4".to_string(),
             ],
-            idxgpos: vec![0,1,2,3,4],
-            idxreads: vec![0,1,2,3],
+            idxgpos: vec![0, 1, 2, 3, 4],
+            idxreads: vec![0, 1, 2, 3],
         };
         return tm1;
     }
