@@ -94,7 +94,7 @@ If alignments are contained in a `CRAM` file the reference must correspond to th
 used in creating the `CRAM`.
 
 `asms cluster` will create 3 subdirectories of `outdir` called
-`outdir/matrices`, `outdir/clusters` and `outdir/stats` ; it will also create a file in `outdir/` called `stats-summary.txt` which 
+`outdir/matrices`, `outdir/clusters` and `outdir/stats` ; it will also create a file in `outdir/` called `stats-summary.bed` which 
 contain descriptive statistics for each locus which has been clustered.
 
 ```
