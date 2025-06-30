@@ -189,7 +189,7 @@ fn binarize(meth: u8, lb: u8, ub: u8) -> i8 {
 fn validate_cgmatch(gpos1: i64, start: i64, end: i64, refseq: &[u8]) -> bool {
     let check1: bool = gpos1 > start && gpos1 <= end;
     let mut check2: bool = false;
-    if (gpos1 >= 1) && (gpos1 <= refseq.len() as i64) {
+    if (gpos1 >= 1) && (gpos1 < refseq.len() as i64) {
         let gpos0 = gpos1 - 1;
         check2 = (b'C' == refseq[gpos0 as usize]) && (b'G' == refseq[(gpos0 + 1) as usize]);
     }
