@@ -78,19 +78,22 @@ OPTIONS:
                     .unwrap()
                     .to_vec(),
             )
-            .unwrap();
+		.unwrap();
+	    let a1 = record.alleles()[0][0] as char ;
+	    let a2 = record.alleles()[1][0] as char ;
             let pos = record.pos() as u64 + 1;
             let ms = utils::get_bedmethyl_slice(&mut tbxreader, &contig, pos - 100, pos + 100);
             let meanmeth: f32 = ms.meth.iter().sum::<f32>() / ms.meth.len() as f32;
             if ms.depth.len() >= 3 && meanmeth >= lb && meanmeth <= ub {
                 println!(
-                    "{}\t{}\t{}\t{:.4}\t{}\t{}",
+                    "{}\t{}\t{}\t{:.4}\t{}\t{}\t{}>{}",
                     contig,
                     pos - 100,
                     pos + 100,
                     meanmeth,
                     ms.depth.len(),
-                    pos
+                    pos,
+		    a1,a2
                 );
             }
         }

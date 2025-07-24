@@ -111,7 +111,8 @@ OPTIONS:
 }
 
 /// find all clusters of <nadj> consecutive intermediately methylate CpGs.
-fn intermediate_regions(methfn: &str, outdir: &str, nadj: usize, region: &str, lb:f32, ub:f32) -> () {
+fn intermediate_regions(methfn: &str, outdir: &str, nadj: usize,
+			region: &str, lb:f32, ub:f32) -> () {
     eprintln!("trying to read from {} ...", methfn);
     eprintln!("writing results to {} ...", outdir);
     let mut tbxreader =
@@ -155,11 +156,13 @@ fn test_state(m: f32, lb: f32, ub: f32, method: u8) -> Test {
 ///
 /// there must be at least nadj adjacent CpGs with intermediate
 /// methylation to call a region.
-fn state_of_meth<W: std::io::Write>(handle: &mut BufWriter<W>, ms: utils::MethSlice, nadj: usize, lb:f32, ub:f32) {
+fn state_of_meth<W: std::io::Write>(handle: &mut BufWriter<W>,
+				    ms: utils::MethSlice,
+				    nadj: usize, lb:f32, ub:f32) {
     let mut ncpg: usize = 0;
     let mut test: Test = NO;
     let mut state = OUT;
-    let (mut irstart, mut irend) = (0u64, 0u64);
+    let ( mut irstart, mut irend ) = (0u64, 0u64);
     let mut irlen: u64;
     for offset in 0..ms.meth.len() {
         test = test_state(ms.meth[offset], lb, ub, 0);
@@ -252,7 +255,6 @@ fn merge_nearby_im(imbed: &str, outdir: &str, thr: u32) {
     let mut left: u32 = 0;
     let mut right: u32;
     let mut cpgcount: u32 = 0;
-
     loop {
         res = bufreader.read_line(&mut buffer);
         len = match res {
@@ -281,8 +283,8 @@ fn merge_nearby_im(imbed: &str, outdir: &str, thr: u32) {
                 IN
             }
             (d, s) if d > thr && s == OUT => {
-                left = oldfields[1].parse::<u32>().unwrap();
-                right = oldfields[2].parse::<u32>().unwrap();
+                left     = oldfields[1].parse::<u32>().unwrap();
+                right    = oldfields[2].parse::<u32>().unwrap();
                 cpgcount = oldfields[4].parse::<u32>().unwrap();
                 utils::write_out(
                     &mut handle,
