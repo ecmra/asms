@@ -36,7 +36,7 @@ fn print_asm<W: std::io::Write>(outdir: &str, mut handle: BufWriter<W>) {
     let bufreader = BufReader::new(File::open(summaryfn).expect("==can't open summary==\n"));
     utils::write_out(
         &mut handle,
-        &format!("#chrom\tchromStart\tchromEnd\tname\tscore(nCpG)\tpop0\tpop1\tm0\tm1\n"),
+        &format!("#chrom\tchromStart\tchromEnd\tname\tscore(nCpG)\tpop0\tpop1\tm0\tm1\tr\tn\tabsmdiff\tstatsfn\n"),
     );
     for line in bufreader.lines() {
         let line = line.unwrap();
@@ -54,6 +54,7 @@ fn print_asm<W: std::io::Write>(outdir: &str, mut handle: BufWriter<W>) {
         let n: usize = fields[3].parse().unwrap();
         let d: usize = fields[5].parse().unwrap();
         let absmdiff: f32 = fields[8].parse().unwrap();
+	let statsfn = fields[11];
         let r = pop0 as f32 / (pop0 + pop1) as f32;
         let c1 = ( r >= 0.2 ) && ( r <= 0.8 );
         let c2 = ( n >= 10 ) && ( d >= 2 ) && ( absmdiff >= 0.2 );
@@ -61,13 +62,14 @@ fn print_asm<W: std::io::Write>(outdir: &str, mut handle: BufWriter<W>) {
 	if c1 && c2 {
 	    status = "PASS";
 	} else {
-	    status="FAIL"
+	    status = "FAIL"
 	}
         utils::write_out(
                 &mut handle,
                 &format!(
-                    "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
-                    chrom, chromstart, chromend, status, d, pop0, pop1, fields[9], fields[10],r,n,absmdiff
+                    "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
+                    chrom, chromstart, chromend, status, d, pop0, pop1,
+		    fields[9], fields[10],r,n,absmdiff, statsfn
                 ),
             );
     }

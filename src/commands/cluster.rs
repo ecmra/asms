@@ -246,7 +246,7 @@ fn init_pi(cluster: &Vec<u8>, n: usize) -> [f32; 2] {
 
 /// initial value for mu
 ///
-/// built using any (maybe random) clustering.
+/// built using any (possibly  random) clustering.
 /// cluster\[i\] is the cluster for read i.
 /// mu is 2 times d array represented as a 1d vector.
 /// mu\[i,j\] => mu \[i*d+j\] where i=0,1 j=0..d
@@ -302,6 +302,7 @@ fn cluster_matrix<W: std::io::Write>(
     let n = m.n;
     let mut cluster: Vec<u8> = vec![0; n];
     for i in 0..n {
+	// optionally seeded by fastrand::seed(seed) (--seed option)
         cluster[i] = fastrand::u8(0..2);
     }
     let mut pi = init_pi(&cluster, n);
