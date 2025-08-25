@@ -4,9 +4,6 @@ use rust_htslib::bcf::IndexedReader;
 use rust_htslib::bcf::Read;
 use rust_htslib::tbx;
 
-/*
-../scan-chr6/out/vcfs/tmp/phase_output/phase_vcf/phased_chr15.vcf.gz
-*/
 
 pub fn scan_vcf(args: &[String]) {
     let usage = "usage: scan-vcf [OPTIONS] <vcf> <methfn> <outdir>         

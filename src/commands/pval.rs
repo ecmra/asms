@@ -30,6 +30,10 @@ pub fn pval_of_matrix(m: &matrix::Matrix, cl: &Vec<u8>, nit:usize)
     let refmedian = refstats.median_abs_diff_notna_0_1; 
     let mut rndmedian:f32;
     let mut pval:usize = 0;
+    if cl.len() < 8 {
+	eprintln!("can't compute empirical pval, too few reads");
+	return (refmedian, -1.0)
+    }
     let mut rndcl = cl.to_vec();
     for _ in 0..nit {
         fastrand::shuffle(&mut rndcl);
@@ -47,11 +51,4 @@ pub fn pval_of_filenames(fnmatrix:&str, fncluster:&str) -> (f32, f32) {
     return res;
 }
 
-#[test]
-fn pval_of_filenames_works() {
-    let fnmatrix = "/home/ecmra/devel-ciacco/methylation/asms/paper/experiments/scan/chr15/matrices/matrix-chr15-100863815-100863868.txt";
-    let fncluster = "/home/ecmra/devel-ciacco/methylation/asms/paper/experiments/scan/chr15/clusters/cluster-chr15-100863815-100863868.txt";
-    let res = pval_of_filenames(fnmatrix, fncluster);
-    eprintln!("{:?}", res);
-    assert!( res.1 == 0.0 );
-}
+
