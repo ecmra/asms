@@ -5,6 +5,13 @@ use std::io::BufReader;
 use std::io::BufWriter;
 
 use fxhash::FxHashMap;
+//use std::collections::HashMap;
+//use std::hash::{BuildHasher, Hasher, RandomState};
+
+use fxhash::{FxHasher};
+use std::collections::HashMap;
+use std::hash::BuildHasherDefault;
+
 
 use rust_htslib::bam::IndexedReader;
 use rust_htslib::bam::Record;
@@ -89,7 +96,12 @@ pub fn matrix_of_bam(
         let ap = record.aligned_pairs();
         // fill a map rpos => gpos.
         // gpos is 0-based
-        let mut rpos2gpos = FxHashMap::default();
+	//let s = BuildHasher::new();
+        //let mut rpos2gpos = FxHashMap::default();
+	//let mut rpos2gpos = FxHashMap::with_capacity(10000);
+	let hasher = BuildHasherDefault::<FxHasher>::default();
+	let mut rpos2gpos = HashMap::with_capacity_and_hasher(10000, hasher);
+	//let mut rpos2gpos = FxHashMap::with_capacity_and_hasher(10000, s);
         for p2 in ap {
             rpos2gpos.insert(p2[0], p2[1]);
         }
@@ -150,19 +162,19 @@ pub fn matrix_of_bam(
 /// based on flags, presence of MM, quality must be >= 10
 pub fn skip(record: &Record) -> bool {
     let flags = record.flags();
-    let rname = std::str::from_utf8(record.qname()).unwrap();
+    //let rname = std::str::from_utf8(record.qname()).unwrap();
     if flags & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FSUPPLEMENTARY | BAM_FQCFAIL | BAM_FDUP) as u16
         != 0
     {
-        eprintln!("skip:{} [flag:{}]", rname, flags);
+        //eprintln!("skip:{} [flag:{}]", rname, flags);
         return true;
     }
     if !(record.aux(b"MM").is_ok() || record.aux(b"Mm").is_ok()) {
-        eprintln!("skip:{} [no MM/ML aux tag]", rname);
+        //eprintln!("skip:{} [no MM/ML aux tag]", rname);
         return true;
     }
     if record.mapq() < 10 {
-        eprintln!("skip:{} [qual:{}]", rname, record.mapq());
+        //eprintln!("skip:{} [qual:{}]", rname, record.mapq());
         return true;
     }
     return false;
