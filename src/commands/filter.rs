@@ -4,6 +4,9 @@ use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::io::BufWriter;
+
+//use crate::commands::cluster;
+use crate::commands::pval;
 //use fxhash::FxHashMap;
 //use std::path::Path;
 
@@ -54,7 +57,11 @@ fn print_asm<W: std::io::Write>(outdir: &str, mut handle: BufWriter<W>) {
         let n: usize = fields[3].parse().unwrap();
         let d: usize = fields[5].parse().unwrap();
         let absmdiff: f32 = fields[8].parse().unwrap();
-	let statsfn = fields[11];
+	let statsfn   = fields[11];
+	let clusterfn = &format!("{}/{}", outdir, fields[12]);
+	let matrixfn  = &format!("{}/{}", outdir, fields[13]);
+	println!("{}", clusterfn);
+	let (_refmedian, pval) = pval::pval_of_filenames(matrixfn, clusterfn);
         let r = pop0 as f32 / (pop0 + pop1) as f32;
         let c1 = ( r >= 0.2 ) && ( r <= 0.8 );
         let c2 = ( n >= 10 ) && ( d >= 2 ) && ( absmdiff >= 0.2 );
@@ -67,7 +74,7 @@ fn print_asm<W: std::io::Write>(outdir: &str, mut handle: BufWriter<W>) {
         utils::write_out(
                 &mut handle,
                 &format!(
-                    "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
+                    "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{pval}\n",
                     chrom, chromstart, chromend, status, d, pop0, pop1,
 		    fields[9], fields[10],r,n,absmdiff, statsfn
                 ),
