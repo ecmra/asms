@@ -209,7 +209,12 @@ pub fn print_summary<W: std::io::Write>(bedfn: &str, outdir: &str, mut handle: B
         for k in 0..cols.len() {
             utils::write_out(&mut handle, &format!("{}\t", meta[cols[k]]));
         }
-        utils::write_out(&mut handle, &format!("{}\n", statsfn));
+	let short_statsfn = &format!("stats/stats-{}-{}-{}.txt", contig, start, end);
+	let short_clusterfn = &format!("clusters/cluster-{}-{}-{}.txt", contig, start, end);
+	let short_matrixfn = &format!("matrices/matrix-{}-{}-{}.txt", contig, start, end);
+	utils::write_out(&mut handle, &format!("{}\t", short_statsfn));
+	utils::write_out(&mut handle, &format!("{}\t", short_clusterfn));
+	utils::write_out(&mut handle, &format!("{}\n", short_matrixfn));
     }
 }
 
