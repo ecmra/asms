@@ -41,6 +41,7 @@ fn print_asm<W: std::io::Write>(outdir: &str, mut handle: BufWriter<W>) {
         &mut handle,
         &format!("#chrom\tchromStart\tchromEnd\tname\tscore(nCpG)\tpop0\tpop1\tm0\tm1\tr\tn\tabsmdiff\tstatsfn\n"),
     );
+    let pvalthr = 1e-3;
     for line in bufreader.lines() {
         let line = line.unwrap();
         if line[0..1] == *"#" {
@@ -66,7 +67,7 @@ fn print_asm<W: std::io::Write>(outdir: &str, mut handle: BufWriter<W>) {
         let c1 = ( r >= 0.2 ) && ( r <= 0.8 );
         let c2 = ( n >= 10 ) && ( d >= 2 ) && ( absmdiff >= 0.2 );
 	let status:&str;
-	if c1 && c2 {
+	if c1 && c2 && (pval >= 0.0 ) && ( pval <= pvalthr) {
 	    status = "PASS";
 	} else {
 	    status = "FAIL"
@@ -74,7 +75,7 @@ fn print_asm<W: std::io::Write>(outdir: &str, mut handle: BufWriter<W>) {
         utils::write_out(
                 &mut handle,
                 &format!(
-                    "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{pval}\n",
+                    "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{pval}\t{}\n",
                     chrom, chromstart, chromend, status, d, pop0, pop1,
 		    fields[9], fields[10],r,n,absmdiff, statsfn
                 ),
