@@ -18,7 +18,7 @@ pub fn filter(args: &[String]) {
 <outdir>         directory which contains the stats subdirectory.
                  the output of filter is in <outdir>/asm.bed 
 ";
-    if (args.len() < 1) || (args[0] == "-h") || (args[0] == "--help") {
+    if ( args.len() < 1 ) || ( args[0] == "-h" ) || ( args[0] == "--help" ) {
         eprintln!("{}", usage);
         return;
     }

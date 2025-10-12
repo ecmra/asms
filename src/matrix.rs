@@ -56,8 +56,8 @@ pub struct Matrix {
 }
 
 /// create a matrix containing the methylation status
-///
 /// of each CpG on each considered read.
+///
 /// rows are reads, columns are genomic positions.
 /// the matrix is written in a file inside the `outdir` directory.
 pub fn matrix_of_bam(
@@ -87,23 +87,23 @@ pub fn matrix_of_bam(
             Ok(_) => &recordbuf,
             Err(_) => panic!("BAM parsing failed"),
         };
-        let isrev = record.is_reverse();
-        let rname = std::str::from_utf8(record.qname()).unwrap();
-        if skip(&record) {
+	if skip(&record) {
             discarded += 1;
             continue;
         }
+        let isrev = record.is_reverse();
+        let rname = std::str::from_utf8(record.qname()).unwrap();
         let ap = record.aligned_pairs();
         // fill a map rpos => gpos.
         // gpos is 0-based
-	//let s = BuildHasher::new();
-        //let mut rpos2gpos = FxHashMap::default();
-	//let mut rpos2gpos = FxHashMap::with_capacity(10000);
 	let hasher = BuildHasherDefault::<FxHasher>::default();
 	let mut rpos2gpos = HashMap::with_capacity_and_hasher(10000, hasher);
 	//let mut rpos2gpos = FxHashMap::with_capacity_and_hasher(10000, s);
         for p2 in ap {
-            rpos2gpos.insert(p2[0], p2[1]);
+	    let gpos0 = p2[1];
+	    if gpos0 >= start && gpos0 <= end {
+		rpos2gpos.insert(p2[0], p2[1]);
+	    }
         }
         // iterate over the modifications in this record
         mod_in_read = 0;

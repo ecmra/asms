@@ -75,7 +75,7 @@ OPTIONS:
         eprintln!("{}", usage);
         return;
     }
-    let mut seed: u64;
+    let mut seed: u64 = 0;
     let mut i:usize = 0;
     let mut maxit:u16 = 10;
     loop {
@@ -105,6 +105,7 @@ OPTIONS:
     eprintln!("bamfn:{}", bamfn);
     eprintln!("reffn:{}", reffn);
     eprintln!("outdir:{}", outdir);
+    eprintln!("seed:{}", seed);
     let now = time::Instant::now();
     fs::create_dir_all(outdir).expect(&format!("can't create {}", outdir));
     fs::create_dir_all(&format!("{}/matrices", outdir)).unwrap();
@@ -304,6 +305,7 @@ fn cluster_matrix<W: std::io::Write>(
     for i in 0..n {
 	// optionally seeded by fastrand::seed(seed) (--seed option)
         cluster[i] = fastrand::u8(0..2);
+	eprintln!("cluster[{}]:{}", i, cluster[i]);
     }
     let mut pi = init_pi(&cluster, n);
     let mut mu = init_mu(&cluster, &m);

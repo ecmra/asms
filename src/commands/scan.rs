@@ -42,7 +42,7 @@ OPTIONS:
                  between lower bound and upper bound.
 --merge-distance <DISTANCE(bp)>
                  merge intermediate regions at less then this distance
-                 (default=1000)
+                 (default=500bp)
 --nadj           <NCPGS>
                  minimum number of adjacent CpGs with intermediate methylation
                  to call an intermediate region.
@@ -54,7 +54,7 @@ OPTIONS:
         eprintln!("{}", usage);
         return;
     }
-    let mut merge_distance: u32 = 1000;
+    let mut merge_distance: u32 = 500;
     let mut nadj: usize = 3;
     let mut region: &str = "";
     let methfn: &String;
