@@ -94,6 +94,7 @@ pub fn matrix_of_bam(
         let isrev = record.is_reverse();
         let rname = std::str::from_utf8(record.qname()).unwrap();
         let ap = record.aligned_pairs();
+	let seq = record.seq().as_bytes();
         // fill a map rpos => gpos.
         // gpos is 0-based
 	let hasher = BuildHasherDefault::<FxHasher>::default();
@@ -101,7 +102,9 @@ pub fn matrix_of_bam(
 	//let mut rpos2gpos = FxHashMap::with_capacity_and_hasher(10000, s);
         for p2 in ap {
 	    let gpos0 = p2[1];
-	    if gpos0 >= start && gpos0 <= end {
+	    let rpos0 = p2[0] as usize;
+	    if gpos0 >= start && gpos0 <= end &&
+		(seq[rpos0] == b'C' || seq[rpos0] == b'G' ) {
 		rpos2gpos.insert(p2[0], p2[1]);
 	    }
         }
@@ -114,7 +117,8 @@ pub fn matrix_of_bam(
             let pos = res.0 as i64;
             let m = res.1;
             if (rpos2gpos.contains_key(&pos)) && (b'm' == m.modified_base as u8) {
-                // rpos2gpos[&pos] is 0-based. change it to 1 based
+                // the gpos returned by rpos2gpos[&pos] is 0-based.
+		// Change it to 1 based
                 // for storage and printing.
                 let gpos0 = rpos2gpos[&pos];
                 let canbase = m.canonical_base as u8;
