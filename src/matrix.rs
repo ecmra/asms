@@ -119,7 +119,7 @@ pub fn matrix_of_bam(
         // iterate over the modifications in this record
         mod_in_read = 0;
         let mut calls = vec![];
-	parsemod::parse_mods(&record, &mut calls, seq);
+	parsemod::parse_mods(&record, &mut calls, seq, minrpos0, maxrpos0);
         calls.sort_by(|c1, c2| c1.0.cmp(&c2.0));
         for res in calls {
             let pos = res.0 as i64;

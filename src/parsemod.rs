@@ -5,13 +5,14 @@ use rust_htslib::bam::record::Seq;
 /// can give positions which correspond to a G on the read
 /// when the mod is detected on the other strand.
 pub fn parse_mods(record: &rust_htslib::bam::Record,
-	      calls: &mut Vec<(i32, htslib::hts_base_mod)>, seq:Seq<'_>) {
+		  calls: &mut Vec<(i32, htslib::hts_base_mod)>,
+		  seq:Seq<'_>, minrpos0:i64, maxrpos0:i64) {
     let rname = std::str::from_utf8(record.qname()).unwrap();
     /*     mods has all the methods of an iterator,
            with item = Result<(i32 (pos), hts_base_mod)>
            plus extra methods to extract info
            about how many and what type of
-           modifications are recorded fot the record
+           modifications are recorded for the record
            I am looking at
      */
     let mods = match record.basemods_iter() {
@@ -40,12 +41,14 @@ pub fn parse_mods(record: &rust_htslib::bam::Record,
     }
     let mut explpos: Vec<i32> = vec![];
     for res in mods {
-        if let Ok((position, m)) = res {
+        if let Ok((rpos0, m)) = res {
             if m.modified_base as u8  != b'm' {
                 continue;
             }
-            calls.push((position, m));
-            explpos.push(position);
+	    if (rpos0 >= minrpos0 as i32) && (rpos0 <= maxrpos0 as i32) {
+		calls.push((rpos0, m));
+		explpos.push(rpos0);
+	    }
         }
     }
     /* add implicit calls: scan the sequence in the 5' to 3' direction.
@@ -56,8 +59,7 @@ pub fn parse_mods(record: &rust_htslib::bam::Record,
        is encoded implicitly, eg C+m. or G-m. */
     if implicit {
         let isrev = record.flags() & 0x10 == 0x10;
-	//let seq = seq.as_bytes();
-        let target = match (canbase, isrev) {
+	let target = match (canbase, isrev) {
             (b'C', false) => b'C',
             (b'C', true)  => b'G',
             (b'G', false) => b'G',
@@ -65,9 +67,10 @@ pub fn parse_mods(record: &rust_htslib::bam::Record,
             _ => panic!("unrecognized canonical base {}{:?}",
 				canbase, isrev),
         };
-        for pos in 0..record.seq_len() {
-            if unsafe{ seq.decoded_base_unchecked(pos) }  == target  {
-                if !(explpos.contains(&(pos as i32))) {
+        for rpos0 in 0..record.seq_len() {
+	    if (rpos0 < minrpos0 as usize) || (rpos0> maxrpos0 as usize) { continue }
+            if unsafe{ seq.decoded_base_unchecked(rpos0) }  == target  {
+                if !(explpos.contains(&(rpos0 as i32))) {
                     let mb = htslib::hts_base_mod {
                         modified_base: b'm' as i32,
                         canonical_base: canbase as i32,
@@ -78,7 +81,7 @@ pub fn parse_mods(record: &rust_htslib::bam::Record,
                         },
                         qual: 0,
                     };
-                    calls.push((pos as i32, mb));
+		    calls.push((rpos0 as i32, mb));
                 }
             }
         }

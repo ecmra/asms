@@ -42,7 +42,7 @@ fn main() {
         let rname = std::str::from_utf8(record.qname()).unwrap();
         let mut calls = vec![];
 	let seq = record.seq();
-        parsemod::parse_mods(&record, &mut calls, seq);
+        parsemod::parse_mods(&record, &mut calls, seq, i64::MIN, i64::MAX);
 	println!("================");
         sort_print_calls(rname, &mut calls);
     }
