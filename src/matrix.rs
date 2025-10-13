@@ -24,6 +24,8 @@ use rust_htslib::htslib::BAM_FUNMAP;
 
 use rust_htslib::bam::ext::BamRecordExtensions;
 use rust_htslib::bam::Read;
+use rust_htslib::bam::record::Seq;
+
 
 use crate::commands::cluster;
 use crate::utils;
@@ -82,6 +84,7 @@ pub fn matrix_of_bam(
     let mut cpg_state: Vec<i8> = Vec::with_capacity(1000);
     let mut cpg_gpos_set = BTreeSet::new();
     let mut recordbuf = Record::new();
+    let mut seq:Seq<'_>;
     while let Some(result) = bamreader.read(&mut recordbuf) {
         let record = match result {
             Ok(_) => &recordbuf,
@@ -94,24 +97,29 @@ pub fn matrix_of_bam(
         let isrev = record.is_reverse();
         let rname = std::str::from_utf8(record.qname()).unwrap();
         let ap = record.aligned_pairs();
-	let seq = record.seq().as_bytes();
+	seq = record.seq();
         // fill a map rpos => gpos.
         // gpos is 0-based
 	let hasher = BuildHasherDefault::<FxHasher>::default();
 	let mut rpos2gpos = HashMap::with_capacity_and_hasher(10000, hasher);
 	//let mut rpos2gpos = FxHashMap::with_capacity_and_hasher(10000, s);
-        for p2 in ap {
+	let mut minrpos0:i64 = i64::MAX;
+	let mut maxrpos0:i64 = i64::MIN;
+	for p2 in ap {
 	    let gpos0 = p2[1];
 	    let rpos0 = p2[0] as usize;
+	    let base = unsafe{ seq.decoded_base_unchecked(rpos0)}; 
 	    if gpos0 >= start && gpos0 <= end &&
-		(seq[rpos0] == b'C' || seq[rpos0] == b'G' ) {
-		rpos2gpos.insert(p2[0], p2[1]);
+	    ( base == b'C' || base == b'G' ) {
+		rpos2gpos.insert(p2[0], gpos0);
+		if p2[0] < minrpos0 { minrpos0 = p2[0]; }
+		if p2[0] > maxrpos0 { maxrpos0 = p2[0]; }
 	    }
-        }
+	}
         // iterate over the modifications in this record
         mod_in_read = 0;
         let mut calls = vec![];
-        parsemod::parse_mods(&record, &mut calls);
+	parsemod::parse_mods(&record, &mut calls, seq);
         calls.sort_by(|c1, c2| c1.0.cmp(&c2.0));
         for res in calls {
             let pos = res.0 as i64;

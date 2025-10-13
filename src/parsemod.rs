@@ -1,10 +1,11 @@
 use rust_htslib::htslib;
+use rust_htslib::bam::record::Seq;
 
 /// base modification iter
 /// can give positions which correspond to a G on the read
 /// when the mod is detected on the other strand.
 pub fn parse_mods(record: &rust_htslib::bam::Record,
-	      calls: &mut Vec<(i32, htslib::hts_base_mod)>) {
+	      calls: &mut Vec<(i32, htslib::hts_base_mod)>, seq:Seq<'_>) {
     let rname = std::str::from_utf8(record.qname()).unwrap();
     /*     mods has all the methods of an iterator,
            with item = Result<(i32 (pos), hts_base_mod)>
@@ -55,7 +56,7 @@ pub fn parse_mods(record: &rust_htslib::bam::Record,
        is encoded implicitly, eg C+m. or G-m. */
     if implicit {
         let isrev = record.flags() & 0x10 == 0x10;
-        let seq = record.seq().as_bytes();
+	//let seq = seq.as_bytes();
         let target = match (canbase, isrev) {
             (b'C', false) => b'C',
             (b'C', true)  => b'G',
@@ -65,7 +66,7 @@ pub fn parse_mods(record: &rust_htslib::bam::Record,
 				canbase, isrev),
         };
         for pos in 0..record.seq_len() {
-            if seq[pos] as u8 == target  {
+            if unsafe{ seq.decoded_base_unchecked(pos) }  == target  {
                 if !(explpos.contains(&(pos as i32))) {
                     let mb = htslib::hts_base_mod {
                         modified_base: b'm' as i32,
