@@ -4,6 +4,7 @@ use rust_htslib::bam::record::Seq;
 /// base modification iter
 /// can give positions which correspond to a G on the read
 /// when the mod is detected on the other strand.
+/// calls contain meth info for all the Cs not specifically the CGs.
 pub fn parse_mods(record: &rust_htslib::bam::Record,
 		  calls: &mut Vec<(i32, htslib::hts_base_mod)>,
 		  seq:Seq<'_>, minrpos0:i64, maxrpos0:i64) {

@@ -104,7 +104,7 @@ pub fn matrix_of_bam(
 	let mut rpos2gpos = HashMap::with_capacity_and_hasher(10000, hasher);
 	//let mut rpos2gpos = FxHashMap::with_capacity_and_hasher(10000, s);
 	let mut minrpos0:i64 = i64::MAX;
-	let mut maxrpos0:i64 = i64::MIN;
+	let mut maxrpos0:i64 = 0;
 	for p2 in ap {
 	    let gpos0 = p2[1];
 	    let rpos0 = p2[0] as usize;
