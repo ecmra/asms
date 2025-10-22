@@ -14,7 +14,6 @@ pub fn parse_mods(record: &rust_htslib::bam::Record,
            plus extra methods to extract info
            about how many and what type of
            modifications are recorded for the record
-           I am looking at
      */
     let mods = match record.basemods_iter() {
         Ok(mods) => mods,
@@ -69,7 +68,7 @@ pub fn parse_mods(record: &rust_htslib::bam::Record,
 				canbase, isrev),
         };
         for rpos0 in 0..record.seq_len() {
-	    if (rpos0 < minrpos0 as usize) || (rpos0> maxrpos0 as usize) { continue }
+	    if (rpos0 < minrpos0 as usize) || (rpos0 > maxrpos0 as usize) { continue }
             if unsafe{ seq.decoded_base_unchecked(rpos0) }  == target  {
                 if !(explpos.contains(&(rpos0 as i32))) {
                     let mb = htslib::hts_base_mod {

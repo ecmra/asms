@@ -22,6 +22,8 @@ use rust_htslib::htslib::BAM_FUNMAP;
 
 use asms::parsemod;
 
+//use numutils::ch14;
+
 /*
 
 test with
@@ -48,9 +50,11 @@ fn main() {
     let mut bamreader = IndexedReader::from_path(bamfn).unwrap();
     let mut recordbuf = Record::new();
     let mut meth:Vec<f32>;
+    let mut lc=0;
     for line in varf.lines() {
     	let line = line.unwrap();
-    	//println!("{line}");
+	lc+=1;
+    	eprintln!("{lc}:{line}");
     	let fields:Vec<&str> = line.split(':').collect();
 	let contig = fields[0];
 	let gpos1:i64 = fields[1].parse::<i64>().unwrap();
@@ -101,11 +105,16 @@ fn main() {
 	    for res in calls {
 		let modrpos0 = res.0;
 		let m = res.1;
-		let nuc0 = unsafe{ seq.decoded_base_unchecked(modrpos0 as usize)};
-		let nuc1 = unsafe{ seq.decoded_base_unchecked((modrpos0 + 1) as usize)};
-		let checkcg = (nuc0 == b'C') && (nuc1 == b'G');
 		// C and G could be nearby on the read, and far away on the genome
-		// because of a deletion; I'm not checking for this.
+		// because of a deletion; I assume this does not happen frequently,
+		// hence I don't check.
+		let (nuc0, nuc1) = match record.is_reverse() {
+		    false => (unsafe{ seq.decoded_base_unchecked(modrpos0 as usize) }, 
+			      unsafe{ seq.decoded_base_unchecked((modrpos0 + 1) as usize) }),
+		    true => (unsafe{ seq.decoded_base_unchecked((modrpos0 - 1) as usize) }, 
+			      unsafe{ seq.decoded_base_unchecked(modrpos0 as usize) }),
+		};
+		let checkcg = (nuc0 == b'C') && (nuc1 == b'G');
 		if !(b'm' == m.modified_base as u8) || !checkcg {continue}
 		let mqual = m.qual as u8;
 		if mqual > 127 {meth.push(1.0)}
@@ -113,9 +122,13 @@ fn main() {
 	    }
 	    let ncpgs = meth.len();
 	    let mmeth = meth.iter().sum::<f32>()/ncpgs as f32;
+	    let sign = match record.is_reverse() {
+		false => '+',
+		true  => '-',
+	    };
 	    match hp {
-		0 => println!("{rname}\t0\t{mmeth}\t{ncpgs}"),
-		1 => println!("{rname}\t1\t{mmeth}\t{ncpgs}"),
+		0 => println!("{rname}\t0\t{mmeth}\t{ncpgs}\t{line}\t{sign}"),
+		1 => println!("{rname}\t1\t{mmeth}\t{ncpgs}\t{line}\t{sign}"),
 		_ => panic!("EEEEEEEEEEEEE????"),
 	    }
 	}

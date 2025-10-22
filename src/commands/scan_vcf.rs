@@ -6,7 +6,7 @@ use rust_htslib::tbx;
 
 
 pub fn scan_vcf(args: &[String]) {
-    let usage = "usage: scan-vcf [OPTIONS] <vcf> <methfn> <outdir>         
+    let usage = "usage: scan-vcf [OPTIONS] <vcf> <methfn>       
 <vcf>            VCF/BCF file containing variants to look at
 <methfn>         compressed (.gz) tabix indexed methylbed file
 OPTIONS:
@@ -65,11 +65,14 @@ OPTIONS:
     }
     for record in vcfreader.records() {
         let record = record.unwrap();
-        let lr = 2 == record.alleles().len();
+	let lr = 2 == record.alleles().len();
         let l1 = 1 == record.alleles()[0].len();
         let l2 = 1 == record.alleles()[1].len();
-        if lr && l1 && l2 {
-            let contig = String::from_utf8(
+	let gt = record.genotypes().expect("error in reading GT").get(0);
+	let l3 = (&format!("{gt}") != "1/1") && (&format!("{gt}") != "1|1");
+	let l4 = record.qual() >= 20.0; 
+	if lr && l1 && l2 && l3 && l4 {
+	    let contig = String::from_utf8(
                 header_view
                     .rid2name(record.rid().unwrap())
                     .unwrap()
@@ -82,7 +85,8 @@ OPTIONS:
             let ms = utils::get_bedmethyl_slice(&mut tbxreader, &contig, pos - 100, pos + 100);
             let meanmeth: f32 = ms.meth.iter().sum::<f32>() / ms.meth.len() as f32;
             if ms.depth.len() >= 3 && meanmeth >= lb && meanmeth <= ub {
-                println!(
+		
+		println!(
                     "{}\t{}\t{}\t{:.4}\t{}\t{}\t{}>{}",
                     contig,
                     pos - 100,
