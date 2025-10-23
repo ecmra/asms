@@ -38,6 +38,10 @@ fn main() {
     SNPs (contig:gcoord:ref:alt)
      */
     let args:Vec<String> = env::args().collect();
+    if args.len() < 3 {
+	eprintln!("Usage: <bam> <variants>");
+	return;
+    }
     let bamfn= &args[1];
     let varfn = &args[2];
     let stdin= std::io::stdin();

@@ -85,16 +85,12 @@ OPTIONS:
             let ms = utils::get_bedmethyl_slice(&mut tbxreader, &contig, pos - 100, pos + 100);
             let meanmeth: f32 = ms.meth.iter().sum::<f32>() / ms.meth.len() as f32;
             if ms.depth.len() >= 3 && meanmeth >= lb && meanmeth <= ub {
-		
 		println!(
-                    "{}\t{}\t{}\t{:.4}\t{}\t{}\t{}>{}",
-                    contig,
+                    "{contig}:{pos}:{a1}:{a2}\t{}\t{}\t{:.4}\t{}",
                     pos - 100,
                     pos + 100,
                     meanmeth,
                     ms.depth.len(),
-                    pos,
-		    a1,a2
                 );
             }
         }
