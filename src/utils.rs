@@ -6,6 +6,14 @@ use std::io::BufWriter;
 use std::io::Write;
 use std::str::FromStr;
 
+
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+//use std::collections::HashMap;
+
+use std::collections::HashSet;
+
+
 pub struct MethSlice {
     pub contig: String,
     pub pos: Vec<u64>,
@@ -15,10 +23,8 @@ pub struct MethSlice {
     pub meth: Vec<f32>,
 }
 
-use std::io::BufReader;
-use std::fs::File;
 use fxhash::FxHashMap;
-use std::io::BufRead;
+
 pub fn read_metadata(fname:&str) -> fxhash::FxHashMap<String, String> {
     let mut bufreader = BufReader::new(File::open(fname).unwrap());
     let mut metadata:FxHashMap<String, String> = FxHashMap::default();
@@ -230,6 +236,28 @@ pub fn mean_silhouette_score(m: &Matrix, cl: &Vec<u8>) -> f32 {
     let (avgintra, avginter) = intra_inter_hammingd(m, cl);
     return (avginter - avgintra) / f32::max(avginter, avgintra);
 }
+
+
+/// read a list of CpG positions
+///
+/// args : filename containing the list
+/// return: Hashset
+pub fn read_cpg_list(fname:&str) -> Result<HashSet::<String>, Box<dyn std::error::Error>> {
+    let mut hset = HashSet::<String>::with_capacity(30_000_000);
+    let file = File::open(fname)?;
+    let mut buf = String::new();
+    let mut bfreader = BufReader::with_capacity(32768, file);
+    loop {
+        let res = bfreader.read_line(&mut buf)?;
+	if res == 0 {break;}
+	buf.pop(); // remove newline
+	hset.insert(buf.clone());
+	buf.clear();
+    }
+    return Ok(hset);
+}
+
+
 
 #[test]
 fn hammingd_test() {
