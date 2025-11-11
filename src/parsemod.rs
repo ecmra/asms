@@ -7,7 +7,7 @@ use rust_htslib::bam::record::Seq;
 /// calls contain meth info for all the Cs not specifically the CGs.
 pub fn parse_mods(record: &rust_htslib::bam::Record,
 		  calls: &mut Vec<(i32, htslib::hts_base_mod)>,
-		  seq:Seq<'_>, minrpos0:i64, maxrpos0:i64) {
+		  seq:Seq<'_>, minrpos0:i32, maxrpos0:i32) {
     let rname = std::str::from_utf8(record.qname()).unwrap();
     /*     mods has all the methods of an iterator,
            with item = Result<(i32 (pos), hts_base_mod)>
@@ -22,6 +22,7 @@ pub fn parse_mods(record: &rust_htslib::bam::Record,
             return;
         }
     };
+    // len of mcodes = how many kind of mutations are there
     let mcodes: &[i32] = mods.recorded();
     let mut implicit: bool = true;
     let mut canbase: u8 = b'C';
@@ -41,11 +42,11 @@ pub fn parse_mods(record: &rust_htslib::bam::Record,
     }
     let mut explpos: Vec<i32> = vec![];
     for res in mods {
-        if let Ok((rpos0, m)) = res {
+	if let Ok((rpos0, m)) = res {
             if m.modified_base as u8  != b'm' {
                 continue;
             }
-	    if (rpos0 >= minrpos0 as i32) && (rpos0 <= maxrpos0 as i32) {
+	    if ( rpos0 >= minrpos0 ) && ( rpos0 <= maxrpos0  ) {
 		calls.push((rpos0, m));
 		explpos.push(rpos0);
 	    }
@@ -58,7 +59,7 @@ pub fn parse_mods(record: &rust_htslib::bam::Record,
        absence of methylation. Used when methylation
        is encoded implicitly, eg C+m. or G-m. */
     if implicit {
-        let isrev = record.flags() & 0x10 == 0x10;
+	let isrev = record.flags() & 0x10 == 0x10;
 	let target = match (canbase, isrev) {
             (b'C', false) => b'C',
             (b'C', true)  => b'G',

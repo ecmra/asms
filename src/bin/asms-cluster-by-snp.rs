@@ -8,9 +8,9 @@ use rust_htslib::bam::Read;
 
 use rust_htslib::bam::Record;
 
-use fxhash::FxHasher;
-use std::hash::BuildHasherDefault;
-use std::collections::HashMap;
+//use fxhash::FxHasher;
+//use std::hash::BuildHasherDefault;
+//use std::collections::HashMap;
 use rust_htslib::bam::ext::BamRecordExtensions;
 
 
@@ -61,9 +61,9 @@ fn main() {
     	eprintln!("{lc}:{line}");
     	let fields:Vec<&str> = line.split(':').collect();
 	let contig = fields[0];
-	let gpos1:i64 = fields[1].parse::<i64>().unwrap();
-	let start:i64 = gpos1 - 500 ;
-	let end:i64 = gpos1 + 500 ;
+	let gpos1snp:i64 = fields[1].parse::<i64>().unwrap();
+	let start:i64 = gpos1snp - 500 ;
+	let end:i64 = gpos1snp + 500 ;
 	let refnuc = fields[2].bytes().nth(0).unwrap();
 	let altnuc = fields[3].bytes().nth(0).unwrap();
 	bamreader.fetch((contig, start, end)).unwrap();
@@ -73,29 +73,33 @@ fn main() {
 		Err(_) => panic!("BAM parsing failed"),
             };
 	    let flags = record.flags();
-	    let qflags = BAM_FUNMAP | BAM_FSECONDARY | BAM_FSUPPLEMENTARY | BAM_FQCFAIL | BAM_FDUP; 
+	    let qflags = BAM_FUNMAP | BAM_FSECONDARY | BAM_FSUPPLEMENTARY
+		| BAM_FQCFAIL | BAM_FDUP; 
 	    if flags & qflags as u16 != 0 { continue }
 	    if record.mapq() < 10 { continue }
 	    let rname = std::str::from_utf8(record.qname()).unwrap();
 	    let seq = record.seq();
 	    let ap =  record.aligned_pairs();
-	    let hasher = BuildHasherDefault::<FxHasher>::default();
-	    let mut rpos0_of_gpos0:HashMap<i64,i64,BuildHasherDefault<FxHasher> > = HashMap::with_capacity_and_hasher(10000, hasher);
+//	    let hasher = BuildHasherDefault::<FxHasher>::default();
+	    //let mut rpos0_of_gpos0:HashMap<i64,i64,BuildHasherDefault<FxHasher> > = HashMap::with_capacity_and_hasher(10000, hasher);
 	    let mut minrpos0:i64 = i64::MAX;
 	    let mut maxrpos0:i64 = 0;
-	    // very expensive, search ap instead
+	    //let mut gpos0snp:i64;
+	    let mut rpos0snp:i64 = 0;
+	    let mut found:bool = false;
 	    for [rpos0, gpos0] in ap {
-		let tmp1 = gpos0 + 1;
-		if tmp1 >= start && tmp1 <= end {
-		    if rpos0 < minrpos0 {minrpos0 = rpos0}
-		    if rpos0 > maxrpos0 {maxrpos0 = rpos0}
-		    rpos0_of_gpos0.insert(gpos0, rpos0);
+		let gpos1 = gpos0+1;
+		if gpos1 < start || gpos1 > end {continue}
+		if rpos0 < minrpos0 {minrpos0=rpos0}
+		if rpos0 > maxrpos0 {maxrpos0=rpos0}
+		if gpos1 == gpos1snp {
+		    //gpos0snp=gpos0;
+		    rpos0snp=rpos0;
+		    found = true;
 		}
 	    }
-	    let gpos0 = gpos1-1;
-	    if !rpos0_of_gpos0.contains_key(&gpos0) {continue}
-	    let rpos0 = rpos0_of_gpos0[&gpos0];
-	    let nuc = unsafe{ seq.decoded_base_unchecked(rpos0 as usize)};
+	    if !found {continue} 
+	    let nuc = unsafe{ seq.decoded_base_unchecked(rpos0snp as usize)};
 	    let hp = match nuc {
 		_ if nuc == refnuc => 0u8,
 		_ if nuc == altnuc => 1u8,
@@ -103,7 +107,7 @@ fn main() {
 	    };
 	    meth = vec![];
 	    let mut calls = vec![];
-	    parsemod::parse_mods(&record, &mut calls, seq, minrpos0, maxrpos0);
+	    parsemod::parse_mods(&record, &mut calls, seq, minrpos0 as i32, maxrpos0 as i32);
             calls.sort_by(|c1, c2| c1.0.cmp(&c2.0));
 	    // calls contain meth info for all the Cs not specifically the CGs.
 	    for res in calls {
