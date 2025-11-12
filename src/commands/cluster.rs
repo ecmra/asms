@@ -119,11 +119,13 @@ OPTIONS:
     let mut oldcontig = fstname.to_string();
     let mut reflen: usize = refreader.fetch_seq_len(&fstname) as usize;
     let mut refseq: &[u8] = refreader.fetch_seq(&fstname, 0, reflen - 1).unwrap();
+    let mut lc = 0;
     for line in bufreader.lines() {
         let line = line.unwrap();
         if line.starts_with("#") {
             continue;
         }
+	lc += 1;
         let fields: Vec<&str> = line.trim_end().split_whitespace().collect::<Vec<_>>();
         let contig = fields[0];
         let start: i64 = fields[1].parse::<i64>().unwrap();
@@ -133,7 +135,7 @@ OPTIONS:
             start: start,
             end: end,
         };
-        eprintln!("processing {}:{}-{}", contig, start, end);
+        eprint!("{}.{}:{}-{}", lc, contig, start, end);
         let nowpartial = time::Instant::now();
         if contig != oldcontig {
             // Free up memory
@@ -141,13 +143,14 @@ OPTIONS:
             // https://github.com/rust-bio/rust-htslib/issues/401
             unsafe { libc::free(refseq.as_ptr() as *mut std::ffi::c_void) };
             reflen = refreader.fetch_seq_len(contig) as usize;
-            eprintln!("loading:{}({}bp(s))", contig, reflen);
+            eprint!("\t[loading:{}({}bp(s))]", contig, reflen);
             refseq = refreader.fetch_seq(contig, 0, reflen - 1).unwrap();
         }
         let m = matrix::matrix_of_bam(&mut bamreader, region, outdir, refseq);
-        eprintln!("found {} reads, {} CpGs", m.n, m.d);
+        eprint!("\t[{} reads, {} CpGs]", m.n, m.d);
         if (0 == m.n) || (0 == m.d) {
-            continue;
+	    eprintln!("");
+	    continue;
         }
 
         let outfn = &format!(
@@ -162,7 +165,7 @@ OPTIONS:
         let stats = stats::compute_stats(&m, &cm.clusters);
 	stats::print_stats(&stats, handle);
 	let elapsedpartial = nowpartial.elapsed();
-        eprintln!("done in {}sec(s)", elapsedpartial.as_secs_f32());
+        eprintln!("\t[{:.3}sec(s)]", elapsedpartial.as_secs_f32());
         oldcontig = contig.to_string();
     }
     let summaryfn = &format!("{}/stats-summary.bed", outdir);
@@ -305,7 +308,7 @@ fn cluster_matrix<W: std::io::Write>(
     for i in 0..n {
 	// optionally seeded by fastrand::seed(seed) (--seed option)
         cluster[i] = fastrand::u8(0..2);
-	eprintln!("cluster[{}]:{}", i, cluster[i]);
+	//eprintln!("cluster[{}]:{}", i, cluster[i]);
     }
     let mut pi = init_pi(&cluster, n);
     let mut mu = init_mu(&cluster, &m);
