@@ -12,14 +12,14 @@ fn main()  {
     for line in io::stdin().lock().lines()  {
 	match line {
 	    Ok(line) => {
-		let is = cpg.get(&line);
+		let is = cpg.contains(&line);
 		match is {
-		    Some(s) => println!("{}:{}", line, s),
+		    true => println!("{}:{}", line, is),
 		    _ => println!("{}:not found", line),
 		}
 	    },
-	    Err(_e) => { eprintln!("we're done here!"); break}
+	    Err(_e) => { eprintln!("error in reading from stdin. I quit"); break}
 	}
     }
-    eprintln!("out of the loop");
+    eprintln!("I quit.");
 }
