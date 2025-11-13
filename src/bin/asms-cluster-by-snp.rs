@@ -80,11 +80,8 @@ fn main() {
 	    let rname = std::str::from_utf8(record.qname()).unwrap();
 	    let seq = record.seq();
 	    let ap =  record.aligned_pairs();
-//	    let hasher = BuildHasherDefault::<FxHasher>::default();
-	    //let mut rpos0_of_gpos0:HashMap<i64,i64,BuildHasherDefault<FxHasher> > = HashMap::with_capacity_and_hasher(10000, hasher);
 	    let mut minrpos0:i64 = i64::MAX;
 	    let mut maxrpos0:i64 = 0;
-	    //let mut gpos0snp:i64;
 	    let mut rpos0snp:i64 = 0;
 	    let mut found:bool = false;
 	    for [rpos0, gpos0] in ap {
@@ -93,7 +90,6 @@ fn main() {
 		if rpos0 < minrpos0 {minrpos0=rpos0}
 		if rpos0 > maxrpos0 {maxrpos0=rpos0}
 		if gpos1 == gpos1snp {
-		    //gpos0snp=gpos0;
 		    rpos0snp=rpos0;
 		    found = true;
 		}
@@ -113,15 +109,15 @@ fn main() {
 	    for res in calls {
 		let modrpos0 = res.0;
 		let m = res.1;
-		// C and G could be nearby on the read, and far away on the genome
-		// because of a deletion; I assume this does not happen frequently,
-		// hence I don't check.
 		let (nuc0, nuc1) = match record.is_reverse() {
 		    false => (unsafe{ seq.decoded_base_unchecked(modrpos0 as usize) }, 
 			      unsafe{ seq.decoded_base_unchecked((modrpos0 + 1) as usize) }),
 		    true => (unsafe{ seq.decoded_base_unchecked((modrpos0 - 1) as usize) }, 
 			      unsafe{ seq.decoded_base_unchecked(modrpos0 as usize) }),
 		};
+		// C and G could be nearby on the read, and far away on the genome
+		// because of a deletion; I assume this does not happen frequently,
+		// hence I don't check.
 		let checkcg = (nuc0 == b'C') && (nuc1 == b'G');
 		if !(b'm' == m.modified_base as u8) || !checkcg {continue}
 		let mqual = m.qual as u8;

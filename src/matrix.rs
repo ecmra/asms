@@ -105,15 +105,14 @@ pub fn matrix_of_bam(
 	//let mut rpos2gpos = FxHashMap::with_capacity_and_hasher(10000, s);
 	let mut minrpos0:i64 = i64::MAX;
 	let mut maxrpos0:i64 = 0;
-	for p2 in ap {
-	    let gpos0 = p2[1];
-	    let rpos0 = p2[0] as usize;
-	    let base = unsafe{ seq.decoded_base_unchecked(rpos0)}; 
-	    if gpos0 >= start && gpos0 <= end &&
-	    ( base == b'C' || base == b'G' ) {
-		rpos2gpos.insert(p2[0], gpos0);
-		if p2[0] < minrpos0 { minrpos0 = p2[0]; }
-		if p2[0] > maxrpos0 { maxrpos0 = p2[0]; }
+	for [rpos0, gpos0] in ap {
+	    let rpos0 = rpos0 as usize;
+	    let base = unsafe{ seq.decoded_base_unchecked(rpos0) }; 
+	    //if gpos0 >= start && gpos0 <= end {
+	    if gpos0 >= start && gpos0 <= end && ( base == b'C' || base == b'G' ) {
+		rpos2gpos.insert(rpos0, gpos0);
+		if (rpos0 as i64) < minrpos0 { minrpos0 = rpos0 as i64; }
+		if (rpos0 as i64) > maxrpos0 { maxrpos0 = rpos0 as i64; }
 	    }
 	}
         // iterate over the modifications in this record
@@ -122,7 +121,7 @@ pub fn matrix_of_bam(
 	parsemod::parse_mods(&record, &mut calls, seq, minrpos0 as i32, maxrpos0 as i32);
         calls.sort_by(|c1, c2| c1.0.cmp(&c2.0));
         for res in calls {
-            let pos = res.0 as i64;
+            let pos = res.0 as usize;
             let m = res.1;
             if (rpos2gpos.contains_key(&pos)) && (b'm' == m.modified_base as u8) {
                 // the gpos returned by rpos2gpos[&pos] is 0-based.
@@ -169,24 +168,19 @@ pub fn matrix_of_bam(
     return m;
 }
 
-/// skip dubious reads
-///
-/// based on flags, presence of MM, quality must be >= 10
+/// skip reads (flags, presence of MM, quality must be >= 10 )
 pub fn skip(record: &Record) -> bool {
     let flags = record.flags();
-    //let rname = std::str::from_utf8(record.qname()).unwrap();
-    if flags & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FSUPPLEMENTARY | BAM_FQCFAIL | BAM_FDUP) as u16
+    if flags & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FSUPPLEMENTARY
+		| BAM_FQCFAIL | BAM_FDUP) as u16
         != 0
     {
-        //eprintln!("skip:{} [flag:{}]", rname, flags);
         return true;
     }
     if !(record.aux(b"MM").is_ok() || record.aux(b"Mm").is_ok()) {
-        //eprintln!("skip:{} [no MM/ML aux tag]", rname);
         return true;
     }
     if record.mapq() < 10 {
-        //eprintln!("skip:{} [qual:{}]", rname, record.mapq());
         return true;
     }
     return false;
