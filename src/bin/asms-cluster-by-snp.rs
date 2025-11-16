@@ -11,8 +11,8 @@ use rust_htslib::bam::Record;
 //use fxhash::FxHasher;
 //use std::hash::BuildHasherDefault;
 //use std::collections::HashMap;
-use rust_htslib::bam::ext::BamRecordExtensions;
 
+use rust_htslib::bam::ext::BamRecordExtensions;
 
 use rust_htslib::htslib::BAM_FDUP;
 use rust_htslib::htslib::BAM_FQCFAIL;
