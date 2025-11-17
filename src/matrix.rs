@@ -57,6 +57,31 @@ pub struct Matrix {
     pub idxreads: Vec<usize>,
 }
 
+/// fill a map rpos0 => gpos0.
+pub fn gpos0_of_rpos0(record:&Record, seq:&Seq<'_>, start:i64, end:i64) ->
+    (HashMap<usize, i64,BuildHasherDefault<FxHasher>>, i64, i64) { 
+    let ap = record.aligned_pairs();
+    // fill a map rpos => gpos.
+    // gpos is 0-based
+    let hasher = BuildHasherDefault::<FxHasher>::default();
+    let mut rpos02gpos0 = HashMap::with_capacity_and_hasher(10000, hasher);
+    //let mut rpos2gpos = FxHashMap::with_capacity_and_hasher(10000, s);
+    let mut minrpos0:i64 = i64::MAX;
+    let mut maxrpos0:i64 = 0;
+    for [rpos0, gpos0] in ap {
+	let rpos0 = rpos0 as usize;
+	let base = unsafe{ seq.decoded_base_unchecked(rpos0) }; 
+	//if gpos0 >= start && gpos0 <= end {
+	if gpos0 >= start && gpos0 <= end && ( base == b'C' || base == b'G' ) {
+	    rpos02gpos0.insert(rpos0, gpos0);
+	    if (rpos0 as i64) < minrpos0 { minrpos0 = rpos0 as i64; }
+	    if (rpos0 as i64) > maxrpos0 { maxrpos0 = rpos0 as i64; }
+	}
+    }
+    return (rpos02gpos0, minrpos0, maxrpos0)
+}
+
+
 /// create a matrix containing the methylation status
 /// of each CpG on each considered read.
 ///
@@ -96,25 +121,12 @@ pub fn matrix_of_bam(
         }
         let isrev = record.is_reverse();
         let rname = std::str::from_utf8(record.qname()).unwrap();
-        let ap = record.aligned_pairs();
-	seq = record.seq();
-        // fill a map rpos => gpos.
-        // gpos is 0-based
-	let hasher = BuildHasherDefault::<FxHasher>::default();
-	let mut rpos2gpos = HashMap::with_capacity_and_hasher(10000, hasher);
-	//let mut rpos2gpos = FxHashMap::with_capacity_and_hasher(10000, s);
-	let mut minrpos0:i64 = i64::MAX;
-	let mut maxrpos0:i64 = 0;
-	for [rpos0, gpos0] in ap {
-	    let rpos0 = rpos0 as usize;
-	    let base = unsafe{ seq.decoded_base_unchecked(rpos0) }; 
-	    //if gpos0 >= start && gpos0 <= end {
-	    if gpos0 >= start && gpos0 <= end && ( base == b'C' || base == b'G' ) {
-		rpos2gpos.insert(rpos0, gpos0);
-		if (rpos0 as i64) < minrpos0 { minrpos0 = rpos0 as i64; }
-		if (rpos0 as i64) > maxrpos0 { maxrpos0 = rpos0 as i64; }
-	    }
-	}
+        seq = record.seq();
+
+	let (rpos2gpos, minrpos0, maxrpos0) =
+	    gpos0_of_rpos0(&record, &seq, start, end);
+		
+	
         // iterate over the modifications in this record
         mod_in_read = 0;
         let mut calls = vec![];
