@@ -34,10 +34,10 @@ pub struct Region<'a> {
 
 /// cluster data
 ///
-/// cprobs prob for a read to belong to cluster 0/1 (sum to 1)
-/// clusters for each read the cluster which has higher prob
-/// mu (k X d matrix, stored in rows) mean of each cluster across positions
-/// pop number of reads assigned to cluster 0/1
+/// cprobs: prob for a read to belong to cluster 0/1 (sum to 1)
+/// clusters: for each read the cluster which has higher prob
+/// mu (k X d matrix, stored in rows): mean of each cluster across positions
+/// pop: number of reads assigned to cluster 0/1
 pub struct Cluster {
     pub cprobs: Vec<[f32; 2]>,
     pub clusters: Vec<u8>,

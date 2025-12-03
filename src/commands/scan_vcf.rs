@@ -52,6 +52,8 @@ OPTIONS:
         return;
     }
     let (vcf, methfn) = (&args[i], &args[i + 1]);
+    eprintln!("vcf:{}", vcf);
+    eprintln!("methfn:{}", methfn);
     let mut tbxreader =
         tbx::Reader::from_path(&methfn).expect(&format!("Could not open {}", methfn));
     let mut vcfreader = IndexedReader::from_path(vcf).expect("Error opening vcf file");
@@ -82,7 +84,11 @@ OPTIONS:
 	    let a1 = record.alleles()[0][0] as char ;
 	    let a2 = record.alleles()[1][0] as char ;
             let pos = record.pos() as u64 + 1;
-            let ms = utils::get_bedmethyl_slice(&mut tbxreader, &contig, pos - 100, pos + 100);
+            let msmaybe = utils::get_bedmethyl_slice(&mut tbxreader, &contig, pos - 100, pos + 100);
+	    let ms = match msmaybe {
+		Ok(ms) => ms,
+		Err(_) => continue
+	    };
             let meanmeth: f32 = ms.meth.iter().sum::<f32>() / ms.meth.len() as f32;
             if ms.depth.len() >= 3 && meanmeth >= lb && meanmeth <= ub {
 		println!(

@@ -79,8 +79,11 @@ pub fn get_bedmethyl_slice(
     contig: &str,
     start: u64,
     end: u64,
-) -> MethSlice {
-    let tid = tbxreader.tid(&contig).unwrap();
+) -> Result<MethSlice, Box<dyn std::error::Error>> {
+    let tid = match tbxreader.tid(&contig) {
+	Ok(tid) => tid,
+	Err(_) => return Err(format!("warning:can't fetch contig:{}", contig).into())
+    };
     tbxreader.fetch(tid, start, end).unwrap();
     let mut records = tbxreader.records();
     let mut pos: Vec<u64> = vec![0; 5_000_000];
@@ -137,14 +140,14 @@ pub fn get_bedmethyl_slice(
         .zip(depth.iter())
         .map(|(m, d)| *m as f32 / *d as f32)
         .collect();
-    MethSlice {
+    Ok(MethSlice {
         contig: String::from(contig),
         pos: pos[0..ncpg].to_vec(),
         modif: modif,
         canon: canon,
         depth: depth,
         meth: meth,
-    }
+    })
 }
 
 /// parse chr[:start-end] into a triplet

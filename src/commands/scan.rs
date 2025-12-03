@@ -127,14 +127,22 @@ fn intermediate_regions(methfn: &str, outdir: &str, nadj: usize,
     if "" == region {
         for contig in contigs {
             eprintln!("Processing {}", contig);
-            ms = utils::get_bedmethyl_slice(&mut tbxreader, &contig, 0, i64::MAX as u64);
-            state_of_meth(&mut handle, ms, nadj, lb, ub);
+            let msmaybe = utils::get_bedmethyl_slice(&mut tbxreader, &contig, 0, i64::MAX as u64);
+	    let ms = match msmaybe {
+		Ok(ms) => ms,
+		Err(_) => continue
+	    };
+	    state_of_meth(&mut handle, ms, nadj, lb, ub);
         }
     } else {
         let (contig, start, end) = utils::parse_region(region);
         eprintln!("Processing {}:{}-{}", contig, start, end);
-        ms = utils::get_bedmethyl_slice(&mut tbxreader, &contig, start as u64, end as u64);
-        state_of_meth(&mut handle, ms, nadj, lb, ub);
+        let msmaybe = utils::get_bedmethyl_slice(&mut tbxreader, &contig, start as u64, end as u64);
+	let ms = match msmaybe {
+		Ok(ms) => ms,
+		Err(_) => return ()
+	};
+	state_of_meth(&mut handle, ms, nadj, lb, ub);
     }
 }
 

@@ -23,7 +23,7 @@ An `asms` workflow starts by  selecting a number of regions at intermediate meth
 followed by clustering the reads on those loci in two groups based on the methylation
 patterns appearing on the reads themselves.
 
-`asms` has 4 subcommands: `scan`,  `cluster`, `filter` and `scan-vcf`.
+`asms` has 5 subcommands: `scan`,  `cluster`, `filter`, `scan-vcf` and `cluster-by-snp`.
 
 # A simple workflow example
 
@@ -73,12 +73,13 @@ OPTIONS:
 
 
 
-
-
 ## cluster
 
-After generating a list of intermediate regions, one can cluster the reads mapping on 
-them using
+The clustering algorithm in `asms` tries to subdivide reads in 2
+groups depending on their methylation content.
+
+After generating a list of intermediate regions, one can cluster the reads 
+mapping on them using
 
 ```
 asms cluster [--seed][--maxit] <bedfn> <bamfn> <reference> <outdir> 
@@ -147,6 +148,15 @@ OPTIONS:
                  only look at specific region
 ```
 
+
+
+# cluster-by-spnp
+
+This uses the output of `scan-vcf` and partitions reads at a list 
+of genomic loci according to whether they contain or not a given
+heterozygous variant.
+It then tests each locus for methylation difference across the partition
+(ie allele specific methylation).
 
 
 # More details on the subcommands
