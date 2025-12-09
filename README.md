@@ -23,7 +23,7 @@ An `asms` workflow starts by  selecting a number of regions at intermediate meth
 followed by clustering the reads on those loci in two groups based on the methylation
 patterns appearing on the reads themselves.
 
-`asms` has 5 subcommands: `scan`,  `cluster`, `filter`, `scan-vcf` and `cluster-by-snp`.
+`asms` has 5 sub-commands: `scan`,  `cluster`, `filter`, `scan-vcf` and `cluster-by-snp`.
 
 # A simple workflow example
 
@@ -94,7 +94,7 @@ the `<outdir>`  directory which will contain the clustering results.
 If alignments are contained in a `CRAM` file the reference must correspond to the one
 used in creating the `CRAM`.
 
-`asms cluster` will create 3 subdirectories of `outdir` called
+`asms cluster` will create 3 sub-directories of `outdir` called
 `outdir/matrices`, `outdir/clusters` and `outdir/stats` ; it will also create a file in `outdir/` called `stats-summary.bed` which 
 contain descriptive statistics for each locus which has been clustered.
 
@@ -115,7 +115,7 @@ the command line is:
 
 `asms filter <outdir>` where    `<outdir>` contains the `stats` subdirectory written by
 `asms cluster` and the `merged-im.bed` file created by `asms scan`.
-`filter` wrotes to `<outdir>/asm.bed` , which is a `BED9` file with the following header:
+`filter` writes to `<outdir>/asm.bed` , which is a `BED9` file with the following header:
 `chrom  chromStart      chromEnd        name    score(nCpG)     pop0    pop1    m0      m1`
 
 where `pop0, pop1` are the sizes of the two clusters of reads and `m0,m1` are the median methylation values
@@ -123,7 +123,7 @@ in the two clusters. The `score(nCpg)` column counts the number of CpGs in each 
 
 
 This figure below represents methylation values in some ASM regions found by
-`asms filter`..
+`asms filter`.
 
 ![Distribution of methylation values in putative ASMs](./figures/asm-density.png)
 
@@ -134,7 +134,7 @@ This figure below represents methylation values in some ASM regions found by
 
 `scan-vcf [--lower-bound][--upper-bound][--region] <vcf> <methfn> <outdir>`
 
-checks a list of known variants (in a `.vcf` file) and prints out a region surronding
+checks a list of known variants (in a `.vcf` file) and prints out a region surrounding
 SNPs falling in a locus where methylation is intermediate.
 Regions obtained in this way can be used for clustering and asm-calling.
 
@@ -150,7 +150,7 @@ OPTIONS:
 
 
 
-# cluster-by-spnp
+# cluster-by-snp
 
 This uses the output of `scan-vcf` and partitions reads at a list 
 of genomic loci according to whether they contain or not a given
@@ -159,7 +159,33 @@ It then tests each locus for methylation difference across the partition
 (ie allele specific methylation).
 
 
-# More details on the subcommands
+## example: a cluster-by-snp workflow
+
+This workflows takes in input an indexed vcf file, a bam file
+and prints a list of loci which pass a test for allele specific
+methylation.
+
+The location of heterozygous SNPs is extracted from the vcf
+and only variants in regions of intermediate methylation
+are tested.
+
+First we extract notable SNPs:
+
+```
+asms scan-vcf <vcf-path.vcf.gz> <meth-path.bed.gz> > snps-filtered.txt`
+```
+
+then we test for allele specificity in methylation:
+
+```
+asms cluster-by-snp <bam-path.bam> snps-filtered.txt
+```
+
+This will print a pvalue for each SNP
+on the `stdout`.
+
+
+# More details on the sub-commands
 
 Bot `scan` and `scan-vcf`  have a `--region` option which restricts the analysis
 to a specific genome stretch.
