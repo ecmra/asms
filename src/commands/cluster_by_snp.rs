@@ -14,6 +14,8 @@ use fastrand;
 
 use crate::parsemod;
 
+use numutils;
+
 pub fn cluster_by_snp(args: &[String]) {
     let usage = "usage: cluster-by-snp [OPTIONS] <bamfn> <varfn>
 <bamfn>          alignment file
@@ -32,7 +34,7 @@ OPTIONS:
         eprintln!("{}", usage);
         return;
     }
-    let mut seed:u64 = 0;
+    let mut seed:u64;
     let mut nperm:usize = 1000;
     let mut i:usize = 0;
     loop {
@@ -69,9 +71,11 @@ OPTIONS:
     	varf = Box::new(BufReader::new(File::open(varfn).unwrap()));
     }
     let mut lc = 0;
+    let mut lines:Vec<String> = vec![];
+    let mut pvals:Vec<f32> = vec![];
     for line in varf.lines() {
     	let line = line.unwrap();
-	lc += 1;
+	lc = lc + 1;
     	let fields:Vec<&str> = line.split(':').collect();
 	let contig:&str = fields[0];
 	let gpos1snp:i64 = fields[1].parse::<i64>().expect("invalid snp pos");
@@ -79,8 +83,19 @@ OPTIONS:
 	let altnuc:u8 = fields[3].bytes().nth(0).expect("invalid altnuc");
 	let ( cl, mmeth, ncpgs, m01, n01 ) =
 	    meth_by_snp(&mut bamreader, contig, gpos1snp, refnuc, altnuc);
-	let (stat, pval) = test_snp_perm(cl.into(), mmeth, ncpgs, nperm, m01, n01);
-	println!("{lc}:{line}:{pval:.3e}:{:.2}:{}:{:.2}:{}", m01[0],n01[0],m01[1],n01[1]);
+	let (_stat, pval) = test_snp_perm(cl.into(), mmeth, ncpgs, nperm, m01, n01);
+	let rec = format!("{line}\t{pval:.3e}:{:.2}:{}:{:.2}:{}", m01[0],n01[0],m01[1],n01[1]);
+	println!("{}", rec);
+	lines.push(rec); pvals.push(pval);
+    }
+    print_with_adj_pval(&lines, &pvals);
+}
+
+fn print_with_adj_pval(lines:&Vec<String>, pvals:&Vec<f32>){
+    let adjpvals = numutils::ch14::padjust(pvals);
+    let nlines:usize = lines.len();
+    for i in 0..nlines {
+	println!("{}\t{}", lines[i], adjpvals[i]);
     }
 }
 
@@ -108,7 +123,7 @@ fn meth_by_snp(bamreader:&mut IndexedReader, contig:&str, gpos1snp:i64, refnuc:u
 		| BAM_FQCFAIL | BAM_FDUP; 
 	    if flags & qflags as u16 != 0 { continue }
 	    if record.mapq() < 10 { continue }
-	    let rname = std::str::from_utf8(record.qname()).unwrap();
+	    let _rname = std::str::from_utf8(record.qname()).unwrap();
 	    let seq = record.seq();
 	    let ap =  record.aligned_pairs();
 	    let (mut minrpos0, mut maxrpos0, mut rpos0snp): (i64, i64, usize) =
@@ -153,11 +168,11 @@ fn meth_by_snp(bamreader:&mut IndexedReader, contig:&str, gpos1snp:i64, refnuc:u
 	    }
 	    let ncg = meth.len();
 	    let mm = meth.iter().sum::<f32>()/ncg as f32;
-	    let sign = match record.is_reverse() {
+	    let _sign = match record.is_reverse() {
 		false => '+',
 		true  => '-',
 	    };
-	    let (rn, an) = (refnuc as char, altnuc as char);
+	    let (_rn, _an) = (refnuc as char, altnuc as char);
 	    /*match hp {
 		0 => println!("{rname}\t0\t{mm}\t{ncg}\t{rn}>{an}\t{sign}"),
 		1 => println!("{rname}\t1\t{mm}\t{ncg}\t{rn}>{an}\t{sign}"),
@@ -182,14 +197,14 @@ unsafe fn base_pair_at_rpos0(seq:&Seq<'_>, rpos0:usize) -> (u8,u8) {
 ///
 /// the background distribution is built by
 /// randomizing the cluster assignment
-fn test_snp_perm(cl:Vec<usize>, mmeth:Vec<f32>, ncpgs:Vec<usize>,
-		 nperm:usize, m01:[f32;2], n01:[usize;2])
+fn test_snp_perm(cl:Vec<usize>, mmeth:Vec<f32>, _ncpgs:Vec<usize>,
+		 nperm:usize, m01:[f32;2], _n01:[usize;2])
 	    -> (f32, f32) {
     let refdiff = f32::abs(m01[0] - m01[1]);
     let mut m01:[f32;2] = [0.,0.];
     let mut n01:[usize;2] = [0,0];
     let mut ngreater:usize = 0;
-    for p in 0..nperm {
+    for _ in 0..nperm {
 	for i in 0..cl.len() {
 	    let idx = fastrand::usize(0..2);
 	    n01[idx]+=1; m01[idx] += mmeth[i];

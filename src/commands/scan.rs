@@ -122,7 +122,7 @@ fn intermediate_regions(methfn: &str, outdir: &str, nadj: usize,
     let outfile = File::create(outfn).unwrap();
     let mut handle = BufWriter::new(outfile);
     let contigs = tbxreader.seqnames();
-    let mut ms: utils::MethSlice;
+    //let mut ms: utils::MethSlice;
     utils::write_out(&mut handle, &format!("#@NADJ:{}\n", nadj));
     if "" == region {
         for contig in contigs {
