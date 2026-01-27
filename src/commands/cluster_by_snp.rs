@@ -26,8 +26,8 @@ OPTIONS:
                  seed for the random number generator 
                  (to initialize permutation testing)
 
---nperm          <usize>
-                 number of permutations (default=1000)
+--maxperm          <usize>
+                 max number of permutations (default=1000)
 
 ";
     if (args.len() < 2) || (args[0] == "-h") || (args[0] == "--help") {
@@ -35,7 +35,7 @@ OPTIONS:
         return;
     }
     let mut seed:u64;
-    let mut nperm:usize = 1000;
+    let mut maxperm:usize = 1000;
     let mut i:usize = 0;
     loop {
         if i >= args.len() {
@@ -49,7 +49,7 @@ OPTIONS:
             continue;
         }
         if "--nperm" == args[i] {
-            nperm = args[i + 1].parse().expect("can't parse maxit");
+            maxperm = args[i + 1].parse().expect("can't parse maxperm");
             i = i + 2;
             continue;
         }
@@ -74,18 +74,23 @@ OPTIONS:
     let mut lines:Vec<String> = vec![];
     let mut pvals:Vec<f32> = vec![];
     for line in varf.lines() {
-    	let line = line.unwrap();
+	let line = line.unwrap();
+	eprintln!("{}", line);
 	lc = lc + 1;
     	let fields:Vec<&str> = line.split(':').collect();
 	let contig:&str = fields[0];
 	let gpos1snp:i64 = fields[1].parse::<i64>().expect("invalid snp pos");
 	let refnuc:u8 = fields[2].bytes().nth(0).expect("invalid refnuc");
 	let altnuc:u8 = fields[3].bytes().nth(0).expect("invalid altnuc");
+	let crefnuc = refnuc as char;
+	let caltnuc = altnuc as char;
 	let ( cl, mmeth, ncpgs, m01, n01 ) =
 	    meth_by_snp(&mut bamreader, contig, gpos1snp, refnuc, altnuc);
-	let (_stat, pval) = test_snp_perm(cl.into(), mmeth, ncpgs, nperm, m01, n01);
-	let rec = format!("{line}\t{pval:.3e}:{:.2}:{}:{:.2}:{}", m01[0],n01[0],m01[1],n01[1]);
-	println!("{}", rec);
+	let (_stat, pval, refdiff, _nperm ) = test_snp_perm(&cl, &mmeth, &ncpgs, maxperm, m01);
+	// meth in cluster 0, #reads in cluster 0, meth in cluster 1, #reads in cluster 1
+	let rec = format!("{line}\t{pval:.3e}:{crefnuc}_{:.2}[{}]:{caltnuc}_{:.2}[{}]{:.2}",
+			  m01[0],n01[0],m01[1],n01[1], refdiff);
+	//println!("{}", rec);
 	lines.push(rec); pvals.push(pval);
     }
     print_with_adj_pval(&lines, &pvals);
@@ -95,10 +100,18 @@ fn print_with_adj_pval(lines:&Vec<String>, pvals:&Vec<f32>){
     let adjpvals = numutils::ch14::padjust(pvals);
     let nlines:usize = lines.len();
     for i in 0..nlines {
-	println!("{}\t{}", lines[i], adjpvals[i]);
+	println!("{}:{:.3e}", lines[i], adjpvals[i]);
     }
 }
 
+/// cluster reads based on snp
+///
+/// returns:
+/// Vec<usize> cluster for read i where 0=ref, 1=alt
+/// Vec<f32> mean methylation for read i in window
+/// Vec<usize> n cpgs on read i in wondows
+/// [f32;2] mean methylation in cluster 0/1
+/// [usize;2] number of reads in cluster 0/1
 fn meth_by_snp(bamreader:&mut IndexedReader, contig:&str, gpos1snp:i64, refnuc:u8, altnuc:u8) ->
     (Vec<usize>, Vec<f32>, Vec<usize>, [f32;2], [usize;2]) {
         let mut recordbuf = Record::new();
@@ -197,23 +210,56 @@ unsafe fn base_pair_at_rpos0(seq:&Seq<'_>, rpos0:usize) -> (u8,u8) {
 ///
 /// the background distribution is built by
 /// randomizing the cluster assignment
-fn test_snp_perm(cl:Vec<usize>, mmeth:Vec<f32>, _ncpgs:Vec<usize>,
-		 nperm:usize, m01:[f32;2], _n01:[usize;2])
-	    -> (f32, f32) {
+/// arguments:
+/// mmeth[i]: mean methylation in window for read i
+/// _ncpgs[i]: number of cpgs in window for read i
+/// nperm: number of permutations
+/// m01: mean methylation in cluster 0/1
+/// n01:number of reads in cluster 0/1
+/// see also : Besag/Clifford Sequential montecarlo p values
+fn test_snp_perm(cl:&Vec<usize>, mmeth:&Vec<f32>, ncpgs:&Vec<usize>,
+		 maxperm:usize, m01:[f32;2])
+	    -> (usize, f32, f32, usize) {
     let refdiff = f32::abs(m01[0] - m01[1]);
-    let mut m01:[f32;2] = [0.,0.];
-    let mut n01:[usize;2] = [0,0];
+    let mut n01:[usize;2];
+    let mut m01:[f32;2];
     let mut ngreater:usize = 0;
-    for _ in 0..nperm {
+    let mut cl = cl.clone();
+    // number of values higher than refdiff used for early stopping
+    let _h = 100; 
+    // number of samples
+    let mut nperm:usize=0;
+    for _ in 0..maxperm {
+	n01 = [0,0];
+	m01 = [0.,0.];
+	fastrand::shuffle(&mut cl);
 	for i in 0..cl.len() {
-	    let idx = fastrand::usize(0..2);
+	    let idx = cl[i];
+	    if ncpgs[i] < 2 { continue }
+	    nperm += 1;
 	    n01[idx]+=1; m01[idx] += mmeth[i];
 	}
-	m01[0] = m01[0] / n01[0] as f32;
-	m01[1] = m01[1] / n01[1] as f32;
+	m01[0] = m01[0] / (n01[0] as f32);
+	m01[1] = m01[1] / (n01[1] as f32);
 	let rnddiff = f32::abs(m01[0] - m01[1]);
 	if rnddiff > refdiff {ngreater+=1}
+	/*if ngreater == h {
+	    return (ngreater  , (ngreater + 1) as f32 / (nperm + 1) as f32, refdiff, nperm);
+	} */
     }
-    return (ngreater as f32 , ngreater as f32 / nperm as f32);
-    //    return Err("oh my!".to_string().into());
+    return (ngreater  , (ngreater + 1) as f32 / (nperm + 1) as f32, refdiff, nperm);
+}
+
+
+#[test]
+fn test_cluster_by_snp(){
+    let cl = vec![0,0,0,1,1,1];
+    let mmeth = vec![0.1,0.1,0.1,0.7,0.7,0.7];
+    let ncpgs = vec![3,3,3,3,3,3];
+    let maxperm = 1000;
+    let m01 = [0.1, 0.7];
+    let (ngreater, prop, refdiff, nperm) = test_snp_perm(&cl, &mmeth, &ncpgs, maxperm, m01);
+    assert!(ngreater==0);
+    assert!(prop < 1e-6);
+    assert!(f32::abs(refdiff - 0.6) < 1e-6);
 }
