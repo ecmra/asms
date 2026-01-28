@@ -172,7 +172,7 @@ are tested.
 First we extract notable SNPs:
 
 ```
-asms scan-vcf <vcf-path.vcf.gz> <meth-path.bed.gz> > snps-filtered.txt`
+asms scan-vcf <vcf-path.vcf.gz> <meth-path.bed.gz> > snps-filtered.txt
 ```
 
 then we test for allele specificity in methylation:
