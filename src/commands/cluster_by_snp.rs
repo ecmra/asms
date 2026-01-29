@@ -81,7 +81,7 @@ OPTIONS:
 	let contig:&str = fields[0];
 	let gpos1snp:i64 = fields[3].parse::<i64>().expect("invalid snp pos");
 	let refnuc:u8 = fields[4].bytes().nth(0).expect("invalid refnuc");
-	let altnuc:u8 = fields[4].bytes().nth(0).expect("invalid altnuc");
+	let altnuc:u8 = fields[5].bytes().nth(0).expect("invalid altnuc");
 	let crefnuc = refnuc as char;
 	let caltnuc = altnuc as char;
 	let ( cl, mmeth, ncpgs, m01, n01 ) =
