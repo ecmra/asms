@@ -132,7 +132,7 @@ This figure below represents methylation values in some ASM regions found by
 ## scan-vcf
 
 
-`scan-vcf [--lower-bound][--upper-bound][--region] <vcf> <methfn> <outdir>`
+`scan-vcf [--lower-bound][--upper-bound][--region] <vcf> <methfn>`
 
 checks a list of known variants (in a `.vcf` file) and prints out a region surrounding
 SNPs falling in a locus where methylation is intermediate.
@@ -148,6 +148,18 @@ OPTIONS:
                  only look at specific region
 ```
 
+
+
+the output of `scan-vcf` is as follows:
+
+
+| 1 | Window Start               |
+| 2 | Window End                 |
+| 3 | SNP coordinate             |
+| 4 | Allele 1 / Reference       |
+| 5 | Allele 2 / Alternate       |
+| 6 | mean methylation in window |
+| 7 | number of CpGs in window   |
 
 
 # cluster-by-snp

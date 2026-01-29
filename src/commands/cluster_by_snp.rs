@@ -77,19 +77,19 @@ OPTIONS:
 	let line = line.unwrap();
 	eprintln!("{}", line);
 	lc = lc + 1;
-    	let fields:Vec<&str> = line.split(':').collect();
+    	let fields:Vec<&str> = line.split('\t').collect();
 	let contig:&str = fields[0];
-	let gpos1snp:i64 = fields[1].parse::<i64>().expect("invalid snp pos");
-	let refnuc:u8 = fields[2].bytes().nth(0).expect("invalid refnuc");
-	let altnuc:u8 = fields[3].bytes().nth(0).expect("invalid altnuc");
+	let gpos1snp:i64 = fields[3].parse::<i64>().expect("invalid snp pos");
+	let refnuc:u8 = fields[4].bytes().nth(0).expect("invalid refnuc");
+	let altnuc:u8 = fields[4].bytes().nth(0).expect("invalid altnuc");
 	let crefnuc = refnuc as char;
 	let caltnuc = altnuc as char;
 	let ( cl, mmeth, ncpgs, m01, n01 ) =
 	    meth_by_snp(&mut bamreader, contig, gpos1snp, refnuc, altnuc);
 	let (_stat, pval, refdiff, _nperm ) = test_snp_perm(&cl, &mmeth, &ncpgs, maxperm, m01);
 	// meth in cluster 0, #reads in cluster 0, meth in cluster 1, #reads in cluster 1
-	let rec = format!("{line}\t{pval:.3e}\t{crefnuc}\t{:.2}\t{}\
-			   \t{caltnuc}\t{:.2}\t{}\t{:.2}",
+	let rec = format!("{line}\t{pval:.3e}\t{:.2}\t{}\
+			   \t{:.2}\t{}\t{:.2}",
 			  m01[0],n01[0],m01[1],n01[1], refdiff);
 	//println!("{}", rec);
 	lines.push(rec); pvals.push(pval);

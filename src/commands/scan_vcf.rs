@@ -92,7 +92,7 @@ OPTIONS:
             let meanmeth: f32 = ms.meth.iter().sum::<f32>() / ms.meth.len() as f32;
             if ms.depth.len() >= 3 && meanmeth >= lb && meanmeth <= ub {
 		println!(
-                    "{contig}:{pos}:{a1}:{a2}\t{}\t{}\t{:.4}\t{}",
+                    "{contig}\t{}\t{}\t{pos}\t{a1}\t{a2}\t{:.4}\t{}",
                     pos - 100,
                     pos + 100,
                     meanmeth,
