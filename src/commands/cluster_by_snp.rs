@@ -213,7 +213,7 @@ unsafe fn base_pair_at_rpos0(seq:&Seq<'_>, rpos0:usize) -> (u8,u8) {
 /// randomizing the cluster assignment
 /// arguments:
 /// mmeth[i]: mean methylation in window for read i
-/// _ncpgs[i]: number of cpgs in window for read i
+/// ncpgs[i]: number of cpgs in window for read i
 /// nperm: number of permutations
 /// m01: mean methylation in cluster 0/1
 /// n01:number of reads in cluster 0/1
@@ -231,13 +231,18 @@ fn test_snp_perm(cl:&Vec<usize>, mmeth:&Vec<f32>, ncpgs:&Vec<usize>,
     // number of samples
     let mut nperm:usize=0;
     for _ in 0..maxperm {
+	// number of reads in allele 1,2
 	n01 = [0,0];
+	// methylation for allele 1,2
 	m01 = [0.,0.];
+	// label reads randomly
+	nperm += 1;
 	fastrand::shuffle(&mut cl);
 	for i in 0..cl.len() {
 	    let idx = cl[i];
+	    // skip if read contain less thn 2 cpgs
 	    if ncpgs[i] < 2 { continue }
-	    nperm += 1;
+	    
 	    n01[idx]+=1; m01[idx] += mmeth[i];
 	}
 	m01[0] = m01[0] / (n01[0] as f32);
