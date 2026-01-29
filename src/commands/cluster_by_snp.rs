@@ -88,7 +88,8 @@ OPTIONS:
 	    meth_by_snp(&mut bamreader, contig, gpos1snp, refnuc, altnuc);
 	let (_stat, pval, refdiff, _nperm ) = test_snp_perm(&cl, &mmeth, &ncpgs, maxperm, m01);
 	// meth in cluster 0, #reads in cluster 0, meth in cluster 1, #reads in cluster 1
-	let rec = format!("{line}\t{pval:.3e}:{crefnuc}_{:.2}[{}]:{caltnuc}_{:.2}[{}]{:.2}",
+	let rec = format!("{line}\t{pval:.3e}\t{crefnuc}\t{:.2}\t{}\
+			   \t{caltnuc}\t{:.2}\t{}\t{:.2}",
 			  m01[0],n01[0],m01[1],n01[1], refdiff);
 	//println!("{}", rec);
 	lines.push(rec); pvals.push(pval);
@@ -100,7 +101,7 @@ fn print_with_adj_pval(lines:&Vec<String>, pvals:&Vec<f32>){
     let adjpvals = numutils::ch14::padjust(pvals);
     let nlines:usize = lines.len();
     for i in 0..nlines {
-	println!("{}:{:.3e}", lines[i], adjpvals[i]);
+	println!("{}\t{:.3e}", lines[i], adjpvals[i]);
     }
 }
 
