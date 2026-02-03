@@ -82,8 +82,8 @@ OPTIONS:
 	let gpos1snp:i64 = fields[3].parse::<i64>().expect("invalid snp pos");
 	let refnuc:u8 = fields[4].bytes().nth(0).expect("invalid refnuc");
 	let altnuc:u8 = fields[5].bytes().nth(0).expect("invalid altnuc");
-	let crefnuc = refnuc as char;
-	let caltnuc = altnuc as char;
+	let _crefnuc = refnuc as char;
+	let _caltnuc = altnuc as char;
 	let ( cl, mmeth, ncpgs, m01, n01 ) =
 	    meth_by_snp(&mut bamreader, contig, gpos1snp, refnuc, altnuc);
 	let (_stat, pval, refdiff, _nperm ) = test_snp_perm(&cl, &mmeth, &ncpgs, maxperm, m01);
@@ -137,7 +137,8 @@ fn meth_by_snp(bamreader:&mut IndexedReader, contig:&str, gpos1snp:i64, refnuc:u
 		| BAM_FQCFAIL | BAM_FDUP; 
 	    if flags & qflags as u16 != 0 { continue }
 	    if record.mapq() < 10 { continue }
-	    let _rname = std::str::from_utf8(record.qname()).unwrap();
+	    let rname = std::str::from_utf8(record.qname()).unwrap();
+	    eprintln!("rname:{}", rname);
 	    let seq = record.seq();
 	    let ap =  record.aligned_pairs();
 	    let (mut minrpos0, mut maxrpos0, mut rpos0snp): (i64, i64, usize) =
