@@ -164,6 +164,7 @@ fn meth_by_snp(bamreader:&mut IndexedReader, contig:&str, gpos1snp:i64, refnuc:u
 	    let mut calls = vec![];
 	    parsemod::parse_mods(&record, &mut calls, seq, minrpos0 as i32, maxrpos0 as i32);
 	    calls.sort_by(|c1, c2| c1.0.cmp(&c2.0));
+	    eprintln!("calls={:?}", calls);
 	    // calls contain meth info for all the Cs not specifically the CGs.
 	    for res in calls {
 		let modrpos0 = res.0 as usize;
