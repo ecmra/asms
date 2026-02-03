@@ -137,8 +137,7 @@ fn meth_by_snp(bamreader:&mut IndexedReader, contig:&str, gpos1snp:i64, refnuc:u
 		| BAM_FQCFAIL | BAM_FDUP; 
 	    if flags & qflags as u16 != 0 { continue }
 	    if record.mapq() < 10 { continue }
-	    let rname = std::str::from_utf8(record.qname()).unwrap();
-	    eprintln!("rname:{}", rname);
+	    let _rname = std::str::from_utf8(record.qname()).unwrap();
 	    let seq = record.seq();
 	    let ap =  record.aligned_pairs();
 	    let (mut minrpos0, mut maxrpos0, mut rpos0snp): (i64, i64, usize) =
@@ -164,11 +163,18 @@ fn meth_by_snp(bamreader:&mut IndexedReader, contig:&str, gpos1snp:i64, refnuc:u
 	    let mut calls = vec![];
 	    parsemod::parse_mods(&record, &mut calls, seq, minrpos0 as i32, maxrpos0 as i32);
 	    calls.sort_by(|c1, c2| c1.0.cmp(&c2.0));
-	    eprintln!("calls={:?}", calls);
 	    // calls contain meth info for all the Cs not specifically the CGs.
 	    for res in calls {
 		let modrpos0 = res.0 as usize;
 		let m = res.1;
+		// when the read is reversed the coordinate on the
+		// read modrpos0 corresponds to a G.
+		// when checking that I am looking at a CG dinucleotide
+		// and the read is reversed I substract -1 from modrpos0 so that
+		// it points to the adjacent C.
+		// I can't do that when the read is revered and modrpos0 == 0.
+		// If this is the case, I skip the call.
+		if (modrpos0==0) && (record.is_reverse()) {continue;} 
 		let (nuc0, nuc1) = match record.is_reverse() {
 		    false => unsafe {base_pair_at_rpos0(&seq, modrpos0)},
 		    true => unsafe{base_pair_at_rpos0(&seq, modrpos0-1)} 
@@ -204,8 +210,9 @@ fn meth_by_snp(bamreader:&mut IndexedReader, contig:&str, gpos1snp:i64, refnuc:u
     	return (cl, mmeth, ncpgs, m01, n01);
     }
 
+
+/// return nucleotide pair at given position in the read
 unsafe fn base_pair_at_rpos0(seq:&Seq<'_>, rpos0:usize) -> (u8,u8) {
-    eprintln!("base_pair_at_rpos0:{}", rpos0);
     return (unsafe{ (*seq).decoded_base_unchecked(rpos0) }, 
      unsafe{ (*seq).decoded_base_unchecked(rpos0 + 1) })
 }
