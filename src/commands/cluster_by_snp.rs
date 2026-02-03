@@ -204,6 +204,7 @@ fn meth_by_snp(bamreader:&mut IndexedReader, contig:&str, gpos1snp:i64, refnuc:u
     }
 
 unsafe fn base_pair_at_rpos0(seq:&Seq<'_>, rpos0:usize) -> (u8,u8) {
+    eprintln!("base_pair_at_rpos0");
     return (unsafe{ (*seq).decoded_base_unchecked(rpos0) }, 
      unsafe{ (*seq).decoded_base_unchecked(rpos0 + 1) })
 }
