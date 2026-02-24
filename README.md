@@ -152,14 +152,14 @@ OPTIONS:
 
 the output of `scan-vcf` is as follows:
 
-
-| 1 | Window Start               |
-| 2 | Window End                 |
-| 3 | SNP coordinate             |
-| 4 | Allele 1 / Reference       |
-| 5 | Allele 2 / Alternate       |
-| 6 | mean methylation in window |
-| 7 | number of CpGs in window   |
+| 1 | contig                     |
+| 2 | Window Start               |
+| 3 | Window End                 |
+| 4 | SNP coordinate             |
+| 5 | Allele 1 / Reference       |
+| 6 | Allele 2 / Alternate       |
+| 7 | mean methylation in window |
+| 8 | number of CpGs in window   |
 
 
 # cluster-by-snp
@@ -169,6 +169,29 @@ of genomic loci according to whether they contain or not a given
 heterozygous variant.
 It then tests each locus for methylation difference across the partition
 (ie allele specific methylation).
+
+
+the output of `cluster-by-snp` is as follows:
+
+
+| 1  | contig                     |
+| 2  | Window Start               |
+| 3  | Window End                 |
+| 4  | SNP coordinate             |
+| 5  | Allele 1 / Reference       |
+| 6  | Allele 2 / Alternate       |
+| 7  | mean methylation in window |
+| 8  | number of CpGs in window   |
+| 9  | pval                       |
+| 10 | meth ref                   |
+| 11 | # reads ref                |
+| 12 | meth alt                   |
+| 13 | # reads alt                |
+| 14 | abs meth diff              |
+| 15 | adjusted pvalue            |
+
+
+
 
 
 ## example: a cluster-by-snp workflow

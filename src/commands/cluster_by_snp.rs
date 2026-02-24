@@ -1,3 +1,25 @@
+//! cluster by read can print the cluster assignment for each read.
+//! 
+//! - it takes in input (optionally) a file name
+//!   where to write the cluster assignment for each input read
+//! - if no file name is given, the program behaves as before,
+//!   and prints no clustering information. Otherwise, see below
+//! - the cluster assignment is 0 for ref and 1 for alternative
+//! - all reads are printed in the same file, which has 
+//!   the following output 4 columns:
+//!   1 rname
+//!   2 cluster 0/1
+//!   3 snp coordinates+ref+alt
+//!   4 avg methylation in window
+//! - at the bottom of the file there's a set
+//!   of summary statistics, prefixed by #@
+//!   #@N total number of reads
+//!   #@WS window size to compute average methylation
+//!   #@POP0/POP1 number of ref/alt reads
+//!   #@DT date/time
+
+
+
 use std::io::BufRead;
 use std::io::BufReader;
 use std::fs::File;
@@ -15,6 +37,14 @@ use fastrand;
 use crate::parsemod;
 
 use numutils;
+
+
+struct Snp<'a>{
+    contig: &'a str,
+    gpos1snp: i64,
+    refnuc: u8,
+    altnuc: u8,
+}
 
 pub fn cluster_by_snp(args: &[String]) {
     let usage = "usage: cluster-by-snp [OPTIONS] <bamfn> <varfn>
@@ -37,6 +67,7 @@ OPTIONS:
     let mut seed:u64;
     let mut maxperm:usize = 1000;
     let mut i:usize = 0;
+    let mut clusterfn:Option<&str> = None;
     loop {
         if i >= args.len() {
             eprintln!("{}", usage);
@@ -50,6 +81,11 @@ OPTIONS:
         }
         if "--nperm" == args[i] {
             maxperm = args[i + 1].parse().expect("can't parse maxperm");
+            i = i + 2;
+            continue;
+        }
+	if "--clusterfn" == args[i] {
+            clusterfn = Some(&args[i + 1]);
             i = i + 2;
             continue;
         }
@@ -86,7 +122,8 @@ OPTIONS:
 	let _caltnuc = altnuc as char;
 	let ( cl, mmeth, ncpgs, m01, n01 ) =
 	    meth_by_snp(&mut bamreader, contig, gpos1snp, refnuc, altnuc);
-	let (_stat, pval, refdiff, _nperm ) = test_snp_perm(&cl, &mmeth, &ncpgs, maxperm, m01);
+	let (_stat, pval, refdiff, _nperm ) =
+	    test_snp_perm(&cl, &mmeth, &ncpgs, maxperm, m01, 0u8);
 	// meth in cluster 0, #reads in cluster 0, meth in cluster 1, #reads in cluster 1
 	let rec = format!("{line}\t{pval:.3e}\t{:.2}\t{}\
 			   \t{:.2}\t{}\t{:.2}",
@@ -221,48 +258,59 @@ unsafe fn base_pair_at_rpos0(seq:&Seq<'_>, rpos0:usize) -> (u8,u8) {
 ///
 /// the background distribution is built by
 /// randomizing the cluster assignment
-/// arguments:
+/// == arguments:
 /// mmeth[i]: mean methylation in window for read i
 /// ncpgs[i]: number of cpgs in window for read i
-/// nperm: number of permutations
+/// maxperm: number of permutations
 /// m01: mean methylation in cluster 0/1
 /// n01:number of reads in cluster 0/1
-/// see also : Besag/Clifford Sequential montecarlo p values
-fn test_snp_perm(cl:&Vec<usize>, mmeth:&Vec<f32>, ncpgs:&Vec<usize>,
-		 maxperm:usize, m01:[f32;2])
+/// mode :u8  0  for vanilla Montecarlo, 1 for sequential Montecarlo
+///        the reference for sequential Montecarlo is
+///        Besag/Clifford Sequential montecarlo p values (Biometrika 1991)
+/// == return:
+/// ngreater: usize number of random values greater than the reference
+///           (real) value
+/// pvalue:   f32
+/// refdiff:  f32
+/// nperm:    usize number of permutations acutally sampled
+///           (can be lower than maxperm in sequential mode )
+pub fn test_snp_perm(cl:&Vec<usize>, mmeth:&Vec<f32>, ncpgs:&Vec<usize>,
+		 maxperm:usize, m01:[f32;2], mode:u8)
 	    -> (usize, f32, f32, usize) {
     let refdiff = f32::abs(m01[0] - m01[1]);
     let mut n01:[usize;2];
     let mut m01:[f32;2];
     let mut ngreater:usize = 0;
     let mut cl = cl.clone();
-    // number of values higher than refdiff used for early stopping
-    let _h = 100; 
-    // number of samples
+    // if early stopping I stop after I see
+    // h values greater than refdiff
+    let h = 20; 
+    // number of permutations sampled
     let mut nperm:usize=0;
     for _ in 0..maxperm {
-	// number of reads in allele 1,2
-	n01 = [0,0];
-	// methylation for allele 1,2
-	m01 = [0.,0.];
+	// number of reads and methylation for allele 0,1
+	n01 = [0,0]; m01 = [0.,0.];
 	// label reads randomly
-	nperm += 1;
+	// shuffle preserve the cardinality of the clusters
 	fastrand::shuffle(&mut cl);
+	nperm += 1;
 	for i in 0..cl.len() {
 	    let idx = cl[i];
-	    // skip if read contain less thn 2 cpgs
 	    if ncpgs[i] < 2 { continue }
-	    
 	    n01[idx]+=1; m01[idx] += mmeth[i];
 	}
 	m01[0] = m01[0] / (n01[0] as f32);
 	m01[1] = m01[1] / (n01[1] as f32);
 	let rnddiff = f32::abs(m01[0] - m01[1]);
-	if rnddiff > refdiff {ngreater+=1}
-	/*if ngreater == h {
-	    return (ngreater  , (ngreater + 1) as f32 / (nperm + 1) as f32, refdiff, nperm);
-	} */
+	if rnddiff > refdiff { ngreater += 1 }
+	if ngreater == h && (mode == 1)  {
+	    return (ngreater  , ngreater as f32 / nperm  as f32, refdiff, nperm);
+	} 
     }
+    // this is the same expression regardless of whether the function
+    // is called in mode 0 or mode 1
+    // mode 0: always reaches here
+    // mode 1: reaches here only if ngreater never hit h (low p-value regime)
     return (ngreater  , (ngreater + 1) as f32 / (nperm + 1) as f32, refdiff, nperm);
 }
 
@@ -274,8 +322,7 @@ fn test_cluster_by_snp(){
     let ncpgs = vec![3,3,3,3,3,3];
     let maxperm = 1000;
     let m01 = [0.1, 0.7];
-    let (ngreater, prop, refdiff, nperm) = test_snp_perm(&cl, &mmeth, &ncpgs, maxperm, m01);
+    let (ngreater, prop, refdiff, _nperm) = test_snp_perm(&cl, &mmeth, &ncpgs, maxperm, m01,0);
     assert!(ngreater==0);
-    assert!(prop < 1e-6);
     assert!(f32::abs(refdiff - 0.6) < 1e-6);
 }

@@ -285,7 +285,7 @@ fn hammingd_test() {
 pub mod test {
 #[test]
     fn read_metadata_works() {
-	let fname = "/home/ecmra/devel-ciacco/methylation/asms/paper/experiments/scan/chr15/matrices/matrix-chr15-100863815-100863868.txt";
+	let fname = "tests/resources/matrix-chr15-100863815-100863868.txt";
 	let md = super::read_metadata(fname);
 	assert!(md["N"] == "96".to_string());
 	assert!(md["D"] == "3".to_string());
