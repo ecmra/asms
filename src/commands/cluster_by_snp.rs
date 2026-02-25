@@ -46,6 +46,30 @@ struct Snp<'a>{
     altnuc: u8,
 }
 
+fn filter_by_ncpgs<T:Copy>(v:&[T], ncpgs:&[usize], thr:usize) -> Vec<T>   {
+    return (*v).iter().
+    enumerate().
+    filter(|x| ncpgs[(*x).0]> thr).
+    map(|x| *(x.1)).collect();
+}
+
+/// compute mean methylation by cluster
+///
+/// fill two array:
+///    m01 contains the means
+///    n01 contains the number of elements per cluster
+pub fn mmeth_by_cluster(cl:&[usize], mmeth:&[f32]) -> ([f32; 2], [usize; 2]) {
+    let mut  m01:[f32;2]= [0.0,0.0]; 
+    let mut n01:[usize;2] = [0,0];
+    for i in 0..cl.len() {
+	let idx = cl[i];
+	m01[idx]+=mmeth[i]; n01[idx]+=1;
+    }
+    m01[0]=m01[0]/n01[0] as f32;
+    m01[1]=m01[1]/n01[1] as f32;
+    return (m01, n01);
+}
+
 pub fn cluster_by_snp(args: &[String]) {
     let usage = "usage: cluster-by-snp [OPTIONS] <bamfn> <varfn>
 <bamfn>          alignment file
@@ -122,13 +146,16 @@ OPTIONS:
 	let _caltnuc = altnuc as char;
 	let ( cl, mmeth, ncpgs, m01, n01 ) =
 	    meth_by_snp(&mut bamreader, contig, gpos1snp, refnuc, altnuc);
+	let cl:Vec<usize> = filter_by_ncpgs(&cl, &ncpgs, 2); 
+        let mmeth:Vec<f32> =  filter_by_ncpgs(&mmeth, &ncpgs, 2); 
+        let ncpgs:Vec<usize> = filter_by_ncpgs(&ncpgs, &ncpgs, 2);
+	let (m01, n01) = mmeth_by_cluster(&cl, &mmeth); 
 	let (_stat, pval, refdiff, _nperm ) =
-	    test_snp_perm(&cl, &mmeth, &ncpgs, maxperm, m01, 0u8);
+	    test_snp_perm(&cl, &mmeth, maxperm, m01, 0u8);
 	// meth in cluster 0, #reads in cluster 0, meth in cluster 1, #reads in cluster 1
 	let rec = format!("{line}\t{pval:.3e}\t{:.2}\t{}\
 			   \t{:.2}\t{}\t{:.2}",
 			  m01[0],n01[0],m01[1],n01[1], refdiff);
-	//println!("{}", rec);
 	lines.push(rec); pvals.push(pval);
     }
     print_with_adj_pval(&lines, &pvals);
@@ -141,6 +168,9 @@ fn print_with_adj_pval(lines:&Vec<String>, pvals:&Vec<f32>){
 	println!("{}\t{:.3e}", lines[i], adjpvals[i]);
     }
 }
+
+
+
 
 /// cluster reads based on snp
 ///
@@ -254,6 +284,7 @@ unsafe fn base_pair_at_rpos0(seq:&Seq<'_>, rpos0:usize) -> (u8,u8) {
      unsafe{ (*seq).decoded_base_unchecked(rpos0 + 1) })
 }
 
+
 /// test if abs(m0 - m1) is significantly different from 0
 ///
 /// the background distribution is built by
@@ -274,7 +305,7 @@ unsafe fn base_pair_at_rpos0(seq:&Seq<'_>, rpos0:usize) -> (u8,u8) {
 /// refdiff:  f32
 /// nperm:    usize number of permutations acutally sampled
 ///           (can be lower than maxperm in sequential mode )
-pub fn test_snp_perm(cl:&Vec<usize>, mmeth:&Vec<f32>, ncpgs:&Vec<usize>,
+pub fn test_snp_perm(cl:&Vec<usize>, mmeth:&Vec<f32>, 
 		 maxperm:usize, m01:[f32;2], mode:u8)
 	    -> (usize, f32, f32, usize) {
     let refdiff = f32::abs(m01[0] - m01[1]);
@@ -284,7 +315,7 @@ pub fn test_snp_perm(cl:&Vec<usize>, mmeth:&Vec<f32>, ncpgs:&Vec<usize>,
     let mut cl = cl.clone();
     // if early stopping I stop after I see
     // h values greater than refdiff
-    let h = 20; 
+    let h = 100; 
     // number of permutations sampled
     let mut nperm:usize=0;
     for _ in 0..maxperm {
@@ -296,7 +327,6 @@ pub fn test_snp_perm(cl:&Vec<usize>, mmeth:&Vec<f32>, ncpgs:&Vec<usize>,
 	nperm += 1;
 	for i in 0..cl.len() {
 	    let idx = cl[i];
-	    if ncpgs[i] < 2 { continue }
 	    n01[idx]+=1; m01[idx] += mmeth[i];
 	}
 	m01[0] = m01[0] / (n01[0] as f32);
@@ -319,10 +349,9 @@ pub fn test_snp_perm(cl:&Vec<usize>, mmeth:&Vec<f32>, ncpgs:&Vec<usize>,
 fn test_cluster_by_snp(){
     let cl = vec![0,0,0,1,1,1];
     let mmeth = vec![0.1,0.1,0.1,0.7,0.7,0.7];
-    let ncpgs = vec![3,3,3,3,3,3];
     let maxperm = 1000;
     let m01 = [0.1, 0.7];
-    let (ngreater, prop, refdiff, _nperm) = test_snp_perm(&cl, &mmeth, &ncpgs, maxperm, m01,0);
+    let (ngreater, prop, refdiff, _nperm) = test_snp_perm(&cl, &mmeth,  maxperm, m01,0);
     assert!(ngreater==0);
     assert!(f32::abs(refdiff - 0.6) < 1e-6);
 }
