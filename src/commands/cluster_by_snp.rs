@@ -23,6 +23,7 @@
 use std::io::BufRead;
 use std::io::BufReader;
 use std::fs::File;
+use std::time;
 
 use rust_htslib::bam::IndexedReader;
 use rust_htslib::bam::Record;
@@ -46,6 +47,10 @@ struct Snp<'a>{
     altnuc: u8,
 }
 
+/// filter vectors positions looking at the corresponding index in ncpgs
+///
+/// use to filter away reads which do not contain enough CpGs
+/// in the measurement window
 fn filter_by_ncpgs<T:Copy>(v:&[T], ncpgs:&[usize], thr:usize) -> Vec<T>   {
     return (*v).iter().
     enumerate().
@@ -119,6 +124,7 @@ OPTIONS:
         eprintln!("{}", usage);
         return;
     }
+    let now = time::Instant::now();
     let bamfn = &args[i];
     let varfn = &args[i + 1];
     let mut bamreader = IndexedReader::from_path(bamfn).
@@ -151,7 +157,7 @@ OPTIONS:
         let ncpgs:Vec<usize> = filter_by_ncpgs(&ncpgs, &ncpgs, 2);
 	let (m01, n01) = mmeth_by_cluster(&cl, &mmeth); 
 	let (_stat, pval, refdiff, _nperm ) =
-	    test_snp_perm(&cl, &mmeth, maxperm, m01, 0u8);
+	    test_snp_perm(&cl, &mmeth, maxperm, m01, n01, 1u8);
 	// meth in cluster 0, #reads in cluster 0, meth in cluster 1, #reads in cluster 1
 	let rec = format!("{line}\t{pval:.3e}\t{:.2}\t{}\
 			   \t{:.2}\t{}\t{:.2}",
@@ -159,6 +165,8 @@ OPTIONS:
 	lines.push(rec); pvals.push(pval);
     }
     print_with_adj_pval(&lines, &pvals);
+    let elapsed = now.elapsed();
+    eprintln!("[cluster-by-snp] elapsed:{}sec(s)", elapsed.as_secs_f32());
 }
 
 fn print_with_adj_pval(lines:&Vec<String>, pvals:&Vec<f32>){
@@ -306,28 +314,26 @@ unsafe fn base_pair_at_rpos0(seq:&Seq<'_>, rpos0:usize) -> (u8,u8) {
 /// nperm:    usize number of permutations acutally sampled
 ///           (can be lower than maxperm in sequential mode )
 pub fn test_snp_perm(cl:&Vec<usize>, mmeth:&Vec<f32>, 
-		 maxperm:usize, m01:[f32;2], mode:u8)
+		 maxperm:usize, m01:[f32;2], n01:[usize;2],mode:u8)
 	    -> (usize, f32, f32, usize) {
     let refdiff = f32::abs(m01[0] - m01[1]);
-    let mut n01:[usize;2];
     let mut m01:[f32;2];
     let mut ngreater:usize = 0;
     let mut cl = cl.clone();
     // if early stopping I stop after I see
     // h values greater than refdiff
-    let h = 100; 
+    let h = 20; 
     // number of permutations sampled
     let mut nperm:usize=0;
     for _ in 0..maxperm {
 	// number of reads and methylation for allele 0,1
-	n01 = [0,0]; m01 = [0.,0.];
-	// label reads randomly
+	m01 = [0.,0.];
 	// shuffle preserve the cardinality of the clusters
 	fastrand::shuffle(&mut cl);
 	nperm += 1;
 	for i in 0..cl.len() {
 	    let idx = cl[i];
-	    n01[idx]+=1; m01[idx] += mmeth[i];
+	    m01[idx] += mmeth[i];
 	}
 	m01[0] = m01[0] / (n01[0] as f32);
 	m01[1] = m01[1] / (n01[1] as f32);
@@ -351,7 +357,8 @@ fn test_cluster_by_snp(){
     let mmeth = vec![0.1,0.1,0.1,0.7,0.7,0.7];
     let maxperm = 1000;
     let m01 = [0.1, 0.7];
-    let (ngreater, prop, refdiff, _nperm) = test_snp_perm(&cl, &mmeth,  maxperm, m01,0);
+    let n01 = [3,3];
+    let (ngreater, prop, refdiff, _nperm) = test_snp_perm(&cl, &mmeth,  maxperm, m01, n01,0);
     assert!(ngreater==0);
     assert!(f32::abs(refdiff - 0.6) < 1e-6);
 }

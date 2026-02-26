@@ -1,7 +1,6 @@
 //! clusters reads mapping over a predefined set of loci looking
 //! at their methylation patterns.
 
-
 use std::fs;
 use std::fs::File;
 use std::io::BufRead;
@@ -172,7 +171,7 @@ OPTIONS:
     let handle = BufWriter::new(File::create(summaryfn).unwrap());
     stats::print_summary(bedfn, outdir, handle);
     let elapsed = now.elapsed();
-    eprintln!("cluster ran in {}sec(s)", elapsed.as_secs_f32());
+    eprintln!("[cluster] elapsed:{}sec(s)", elapsed.as_secs_f32());
 }
 
 pub fn cluster_of_file(fname:&str) -> Cluster {

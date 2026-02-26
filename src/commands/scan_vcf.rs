@@ -4,6 +4,7 @@ use rust_htslib::bcf::IndexedReader;
 use rust_htslib::bcf::Read;
 use rust_htslib::tbx;
 
+use std::time;
 
 pub fn scan_vcf(args: &[String]) {
     let usage = "usage: scan-vcf [OPTIONS] <vcf> <methfn>       
@@ -51,6 +52,7 @@ OPTIONS:
         eprintln!("{}", usage);
         return;
     }
+    let now = time::Instant::now();
     let (vcf, methfn) = (&args[i], &args[i + 1]);
     eprintln!("vcf:{}", vcf);
     eprintln!("methfn:{}", methfn);
@@ -101,4 +103,6 @@ OPTIONS:
             }
         }
     }
+    let elapsed = now.elapsed();
+    eprintln!("[scan-vcf] elapsed:{}sec(s)", elapsed.as_secs_f32());
 }
