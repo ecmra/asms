@@ -12,18 +12,19 @@ use crate::commands::pval;
 
 use crate::utils;
 
-/// read summary stats and use them to define asms
+/// read summary stats and use them to
+/// test the significance of the clustering
 pub fn filter(args: &[String]) {
     let usage = "usage: filter <outdir>
 <outdir>         directory which contains the stats subdirectory.
-                 the output of filter is in <outdir>/asm.bed 
+                 the output of filter is in <outdir>/pass.bed 
 ";
     if ( args.len() < 1 ) || ( args[0] == "-h" ) || ( args[0] == "--help" ) {
         eprintln!("{}", usage);
         return;
     }
     let outdir = &args[0];
-    let asmfn = &format!("{}/asm.bed", outdir);
+    let asmfn = &format!("{}/pass.bed", outdir);
     let handleasm = BufWriter::new(File::create(asmfn).expect(&format!("==can't create {}==\n", asmfn)));
     print_asm(outdir, handleasm);
 }
