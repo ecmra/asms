@@ -40,12 +40,12 @@ use crate::parsemod;
 use numutils;
 
 
-struct Snp<'a>{
-    contig: &'a str,
-    gpos1snp: i64,
-    refnuc: u8,
-    altnuc: u8,
-}
+// struct Snp<'a>{
+//     contig: &'a str,
+//     gpos1snp: i64,
+//     refnuc: u8,
+//     altnuc: u8,
+// }
 
 /// filter vectors positions looking at the corresponding index in ncpgs
 ///
@@ -96,7 +96,7 @@ OPTIONS:
     let mut seed:u64;
     let mut maxperm:usize = 1000;
     let mut i:usize = 0;
-    let mut clusterfn:Option<&str> = None;
+    //let mut clusterfn:Option<&str> = None;
     loop {
         if i >= args.len() {
             eprintln!("{}", usage);
@@ -113,11 +113,11 @@ OPTIONS:
             i = i + 2;
             continue;
         }
-	if "--clusterfn" == args[i] {
+	/*if "--clusterfn" == args[i] {
             clusterfn = Some(&args[i + 1]);
             i = i + 2;
             continue;
-        }
+        }*/
 	break;
     }
     if args.len() - i != 2 {
@@ -150,11 +150,11 @@ OPTIONS:
 	let altnuc:u8 = fields[5].bytes().nth(0).expect("invalid altnuc");
 	let _crefnuc = refnuc as char;
 	let _caltnuc = altnuc as char;
-	let ( cl, mmeth, ncpgs, m01, n01 ) =
+	let ( cl, mmeth, ncpgs, _m01, _n01 ) =
 	    meth_by_snp(&mut bamreader, contig, gpos1snp, refnuc, altnuc);
 	let cl:Vec<usize> = filter_by_ncpgs(&cl, &ncpgs, 2); 
         let mmeth:Vec<f32> =  filter_by_ncpgs(&mmeth, &ncpgs, 2); 
-        let ncpgs:Vec<usize> = filter_by_ncpgs(&ncpgs, &ncpgs, 2);
+        let _ncpgs:Vec<usize> = filter_by_ncpgs(&ncpgs, &ncpgs, 2);
 	let (m01, n01) = mmeth_by_cluster(&cl, &mmeth); 
 	let (_stat, pval, refdiff, _nperm ) =
 	    test_snp_perm(&cl, &mmeth, maxperm, m01, n01, 1u8);
