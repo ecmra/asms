@@ -166,7 +166,7 @@ the output of `scan-vcf` is as follows:
 
 # cluster-by-snp
 
-This uses the output of `scan-vcf` and partitions reads at a list 
+This command uses the output of `scan-vcf` and partitions reads at a list 
 of genomic loci according to whether they contain or not a given
 heterozygous variant.
 It then tests each locus for methylation difference across the partition
