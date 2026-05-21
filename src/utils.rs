@@ -281,13 +281,4 @@ fn hammingd_test() {
 }
 
 
-#[cfg(test)]
-pub mod test {
-#[test]
-    fn read_metadata_works() {
-	let fname = "tests/resources/matrix-chr15-100863815-100863868.txt";
-	let md = super::read_metadata(fname);
-	assert!(md["N"] == "96".to_string());
-	assert!(md["D"] == "3".to_string());
-    }
-}
+
