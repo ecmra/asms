@@ -358,7 +358,7 @@ fn test_cluster_by_snp(){
     let maxperm = 1000;
     let m01 = [0.1, 0.7];
     let n01 = [3,3];
-    let (ngreater, prop, refdiff, _nperm) = test_snp_perm(&cl, &mmeth,  maxperm, m01, n01,0);
+    let (ngreater, _prop, refdiff, _nperm) = test_snp_perm(&cl, &mmeth,  maxperm, m01, n01,0);
     assert!(ngreater==0);
     assert!(f32::abs(refdiff - 0.6) < 1e-6);
 }
