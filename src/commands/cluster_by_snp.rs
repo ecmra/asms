@@ -1,4 +1,4 @@
-//! cluster by read can print the cluster assignment for each read.
+//! TODO:cluster by read can print the cluster assignment for each read.
 //! 
 //! - it takes in input (optionally) a file name
 //!   where to write the cluster assignment for each input read
