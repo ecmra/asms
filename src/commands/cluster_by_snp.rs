@@ -47,15 +47,22 @@ use numutils;
 //     altnuc: u8,
 // }
 
-/// filter vectors positions looking at the corresponding index in ncpgs
+/// filter vectors positions  (cl, mmeth)
+/// looking at the corresponding index in ncpgs
 ///
-/// use to filter away reads which do not contain enough CpGs
-/// in the measurement window
-fn filter_by_ncpgs<T:Copy>(v:&[T], ncpgs:&[usize], thr:usize) -> Vec<T>   {
-    return (*v).iter().
-    enumerate().
-    filter(|x| ncpgs[(*x).0]> thr).
-    map(|x| *(x.1)).collect();
+/// use to filter away measurements from reads which do not contain
+/// enough CpGs in the measurement window
+fn filter_by_ncpgs(v1:&[usize], v2:&[f32], ncpgs:&[usize], thr:usize)
+		   -> (Vec<usize>, Vec<f32>)   {
+    let mut fv1:Vec<usize> = Vec::with_capacity(100);
+    let mut fv2:Vec<f32> = Vec::with_capacity(100);
+    for i in 0..v1.len() {
+	if ncpgs[i] > thr {
+	    fv1.push(v1[i]);
+	    fv2.push(v2[i]);
+	}
+    }
+    return (fv1, fv2);
 }
 
 /// compute mean methylation by cluster
@@ -152,9 +159,9 @@ OPTIONS:
 	let _caltnuc = altnuc as char;
 	let ( cl, mmeth, ncpgs, _m01, _n01 ) =
 	    meth_by_snp(&mut bamreader, contig, gpos1snp, refnuc, altnuc);
-	let cl:Vec<usize> = filter_by_ncpgs(&cl, &ncpgs, 2); 
-        let mmeth:Vec<f32> =  filter_by_ncpgs(&mmeth, &ncpgs, 2); 
-        let _ncpgs:Vec<usize> = filter_by_ncpgs(&ncpgs, &ncpgs, 2);
+	let( cl, mmeth) =     filter_by_ncpgs(&cl,&mmeth, &ncpgs, 2); 
+        //let mmeth:Vec<f32> =    filter_by_ncpgs(&mmeth, &ncpgs, 2); 
+        //let _ncpgs:Vec<usize> = filter_by_ncpgs(&ncpgs, &ncpgs, 2);
 	let (m01, n01) = mmeth_by_cluster(&cl, &mmeth); 
 	let (_stat, pval, refdiff, _nperm ) =
 	    test_snp_perm(&cl, &mmeth, maxperm, m01, n01, 1u8);
