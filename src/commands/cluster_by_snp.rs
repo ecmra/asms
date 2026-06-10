@@ -196,6 +196,7 @@ fn meth_by_snp(bamreader:&mut IndexedReader, contig:&str, gpos1snp:i64, refnuc:u
 	let start:i64 = gpos1snp - 500 ;
 	let end:i64 = gpos1snp + 500 ;
 	bamreader.fetch((contig, start, end)).unwrap();
+	// cl contains the cluster for each read (0 or 1)
 	let mut cl:Vec<usize> = Vec::with_capacity(1000); 
 	let mut mmeth:Vec<f32> = Vec::with_capacity(1000);
 	let mut ncpgs:Vec<usize> = Vec::with_capacity(1000);
