@@ -92,7 +92,12 @@ OPTIONS:
                  seed for the random number generator 
                  (to initialize permutation testing)
 
---maxperm          <usize>
+--window-size    <usize>
+                 interval around the snp used for clustering
+                 is  [snp - windows-size, snp + windows-size]
+                 default: 500
+
+--maxperm        <usize>
                  max number of permutations (default=1000)
 
 ";
@@ -102,6 +107,7 @@ OPTIONS:
     }
     let mut seed:u64;
     let mut maxperm:usize = 1000;
+    let mut ws:usize = 500;
     let mut i:usize = 0;
     //let mut clusterfn:Option<&str> = None;
     loop {
@@ -116,7 +122,12 @@ OPTIONS:
             continue;
         }
         if "--nperm" == args[i] {
-            maxperm = args[i + 1].parse().expect("can't parse maxperm");
+            maxperm = args[i + 1].parse().expect("can't parse nperm");
+            i = i + 2;
+            continue;
+        }
+	if "--windows-size" == args[i] {
+            ws = args[i + 1].parse().expect("can't parse windows-size");
             i = i + 2;
             continue;
         }
@@ -158,7 +169,7 @@ OPTIONS:
 	let _crefnuc = refnuc as char;
 	let _caltnuc = altnuc as char;
 	let ( cl, mmeth, ncpgs, _m01, _n01 ) =
-	    meth_by_snp(&mut bamreader, contig, gpos1snp, refnuc, altnuc);
+	    meth_by_snp(&mut bamreader, contig, gpos1snp, refnuc, altnuc, ws);
 	let( cl, mmeth) =     filter_by_ncpgs(&cl,&mmeth, &ncpgs, 2); 
         //let mmeth:Vec<f32> =    filter_by_ncpgs(&mmeth, &ncpgs, 2); 
         //let _ncpgs:Vec<usize> = filter_by_ncpgs(&ncpgs, &ncpgs, 2);
@@ -184,9 +195,6 @@ fn print_with_adj_pval(lines:&Vec<String>, pvals:&Vec<f32>){
     }
 }
 
-
-
-
 /// cluster reads based on snp
 ///
 /// returns:
@@ -195,7 +203,7 @@ fn print_with_adj_pval(lines:&Vec<String>, pvals:&Vec<f32>){
 /// Vec<usize> n cpgs on read i in wondows
 /// [f32;2] mean methylation in cluster 0/1
 /// [usize;2] number of reads in cluster 0/1
-fn meth_by_snp(bamreader:&mut IndexedReader, contig:&str, gpos1snp:i64, refnuc:u8, altnuc:u8) ->
+fn meth_by_snp(bamreader:&mut IndexedReader, contig:&str, gpos1snp:i64, refnuc:u8, altnuc:u8, _ws:usize) ->
     (Vec<usize>, Vec<f32>, Vec<usize>, [f32;2], [usize;2]) {
         let mut recordbuf = Record::new();
 	// methylation along the read
