@@ -173,26 +173,23 @@ It then tests each locus for methylation difference across the partition
 (ie allele specific methylation).
 The output of `cluster-by-snp` is as follows:
 
-| column | content                            |
+| column | content                    |
 |--------|----------------------------|
 | 1      | contig                     |
-| 2      | Window Start               |
-| 3      | Window End                 |
+| 2      | window start               |
+| 3      | window end                 |
 | 4      | SNP coordinate             |
-| 5      | Allele 1 / Reference       |
-| 6      | Allele 2 / Alternate       |
+| 5      | allele 1 / Reference       |
+| 6      | allele 2 / Alternate       |
 | 7      | mean methylation in window |
 | 8      | number of CpGs in window   |
 | 9      | pval                       |
 | 10     | meth ref                   |
-| 11     | # reads ref                |
+| 11     | depth ref                  |
 | 12     | meth alt                   |
-| 13     | # reads alt                |
+| 13     | depth alt                  |
 | 14     | abs meth diff              |
 | 15     | adjusted pvalue            |
-
-
-
 
 
 ## example: a cluster-by-snp workflow
