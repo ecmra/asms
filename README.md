@@ -30,7 +30,7 @@ patterns appearing on the reads themselves.
 ## Selecting interesting regions with `scan`
 
 ```
-asms scan [--nadj][--merge_distance][--region][--lower-bound][--upper-bound] <file.bed.gz> <outdir>
+asms scan [OPTIONS] <file.bed.gz> <outdir>
 ```
 
 where `file.bed.gz` is a 
@@ -82,7 +82,7 @@ After generating a list of intermediate regions, one can cluster the reads
 mapping on them using
 
 ```
-asms cluster [--seed][--maxit] <bedfn> <bamfn> <reference> <outdir> 
+asms cluster [OPTIONS] <bedfn> <bamfn> <reference> <outdir> 
 ```
 
 the command line arguments are as follows:
@@ -132,10 +132,11 @@ This figure below represents methylation values in some ASM regions found by
 ## scan-vcf
 
 
-`scan-vcf [--lower-bound][--upper-bound][--region] <vcf> <methfn>`
+`scan-vcf [OPTIONS] <vcf> <methfn>`
 
-checks a list of known variants (in a `.vcf` file) and prints out a region surrounding
-SNPs falling in a locus where methylation is intermediate.
+checks a list of known variants (in a `.vcf` file) and selects
+SNPs falling in a stretch of intermediate methylation. By default
+it considers a locus of 200bp centered around the SNP.
 Regions obtained in this way can be used for clustering and asm-calling.
 
 ```
@@ -145,32 +146,52 @@ OPTIONS:
                  intermediate regions are defined as having methylation
                  between lower bound and upper bound.
 --region         <CONTIG:NUM-NUM>
-                 only look at specific region
+                 only look for SNPs contained in a specific region
+--whl            half size of the window centered around the SNP
+                 which is used to compute average methylation
+                 and check whether it belongs to [lower bound, upper bound]
 ```
-
-
 
 the output of `scan-vcf` is as follows:
 
 | column | content                    |
 |--------|----------------------------|
 | 1      | contig                     |
-| 2      | Window Start               |
-| 3      | Window End                 |
+| 2      | window Start               |
+| 3      | window End                 |
 | 4      | SNP coordinate             |
-| 5      | Allele 1 / Reference       |
-| 6      | Allele 2 / Alternate       |
+| 5      | allele 1 / Reference       |
+| 6      | allele 2 / Alternate       |
 | 7      | mean methylation in window |
 | 8      | number of CpGs in window   |
 
 
 # cluster-by-snp
 
-This command uses the output of `scan-vcf` and partitions reads at a list 
+
+`cluster-by-snp [OPTIONS] <bamfn> <varfn>`
+
+This command uses the output of `scan-vcf` (contained in the file `<varfn>` 
+and partitions reads at a list 
 of genomic loci according to whether they contain or not a given
 heterozygous variant.
 It then tests each locus for methylation difference across the partition
 (ie allele specific methylation).
+
+```
+OPTIONS:
+--seed           <u64>
+                 seed for the random number generator 
+                 (to initialize permutation testing)
+
+--window-size    <usize>
+                 interval around the snp used for clustering
+                 is  [snp - windows-size, snp + windows-size]
+                 default: 500
+--maxperm        <usize>
+                 max number of permutations (default=1000)
+```
+
 The output of `cluster-by-snp` is as follows:
 
 | column | content                        |
