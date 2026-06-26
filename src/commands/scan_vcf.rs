@@ -14,9 +14,14 @@ OPTIONS:
 --lower-bound    <float in [0,1] default=0.4>
 --upper-bound    <float in [0,1] default=0.6>
                  intermediate regions are defined as having methylation
-                 between lower bound and upper bound.
+                 between lower bound and upper bound
+
 --region         <CONTIG:NUM-NUM>
                  only look at specific region
+
+--whl            half size of the window centered around the SNP
+                 which is used to compute average methylation
+                 and check whether it belongs to [lower bound, upper bound]
 ";
     if (0 == args.len()) || (args[0] == "-h") || (args[0] == "--help") {
         eprintln!("{}", usage);
@@ -24,6 +29,8 @@ OPTIONS:
     }
     let mut lb:f32 = 0.4;
     let mut ub:f32 = 0.6;
+    // window half size
+    let mut whl:usize = 100;
     let mut region: &str = "";
     let mut i: usize = 0;
     loop {
@@ -43,6 +50,11 @@ OPTIONS:
         }
 	if "--upper-bound" == args[i] {
             ub = args[i + 1].parse().unwrap();
+            i = i + 2;
+            continue;
+        }
+	if "--whl" == args[i] {
+            whl = args[i + 1].parse().unwrap();
             i = i + 2;
             continue;
         }
@@ -95,8 +107,8 @@ OPTIONS:
             if ms.depth.len() >= 3 && meanmeth >= lb && meanmeth <= ub {
 		println!(
                     "{contig}\t{}\t{}\t{pos}\t{a1}\t{a2}\t{:.4}\t{}",
-                    pos - 100,
-                    pos + 100,
+                    pos - whl as u64,
+                    pos + whl as u64,
                     meanmeth,
                     ms.depth.len(),
                 );
