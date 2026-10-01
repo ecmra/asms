@@ -3,7 +3,8 @@ use crate::utils;
 use rust_htslib::bcf::IndexedReader;
 use rust_htslib::bcf::Read;
 use rust_htslib::tbx;
-
+use rust_htslib::bcf::header::HeaderView;
+use rust_htslib::tbx::Reader;
 use std::time;
 
 pub fn scan_vcf(args: &[String]) {
@@ -79,8 +80,16 @@ OPTIONS:
             .fetch(rid, start as u64, Some(end as u64))
             .unwrap();
     }
-    for record in vcfreader.records() {
-        let record = record.unwrap();
+    process_vcf(&mut vcfreader, &header_view, &mut tbxreader,  lb, ub, whl);
+    let elapsed = now.elapsed();
+    eprintln!("[scan-vcf] elapsed:{}sec(s)", elapsed.as_secs_f32());
+}
+
+
+fn process_vcf<R:Read>(vcf: &mut R, header_view:&HeaderView, tbxreader: &mut Reader, lb:f32, ub:f32, whl:usize) ->
+    Result<(), Box<dyn std::error::Error>> {
+    for record in vcf.records() {
+	let record = record?;
 	let lr = 2 == record.alleles().len();
         let l1 = 1 == record.alleles()[0].len();
         let l2 = 1 == record.alleles()[1].len();
@@ -98,7 +107,7 @@ OPTIONS:
 	    let a1 = record.alleles()[0][0] as char ;
 	    let a2 = record.alleles()[1][0] as char ;
             let pos = record.pos() as u64 + 1;
-            let msmaybe = utils::get_bedmethyl_slice(&mut tbxreader, &contig, pos - 100, pos + 100);
+            let msmaybe = utils::get_bedmethyl_slice(tbxreader, &contig, pos - 100, pos + 100);
 	    let ms = match msmaybe {
 		Ok(ms) => ms,
 		Err(_) => continue
@@ -115,6 +124,7 @@ OPTIONS:
             }
         }
     }
-    let elapsed = now.elapsed();
-    eprintln!("[scan-vcf] elapsed:{}sec(s)", elapsed.as_secs_f32());
-}
+	Ok(())
+    }
+	
+
