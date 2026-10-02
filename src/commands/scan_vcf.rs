@@ -73,71 +73,29 @@ OPTIONS:
     eprintln!("methfn:{}", methfn);
     let mut tbxreader =
         tbx::Reader::from_path(&methfn).expect(&format!("Could not open {}", methfn));
-    enum VcfReader {
-	Std(Reader),
-	Indexed(IndexedReader)
-    }
-
-    impl VcfReader {
-    }
-
     
-    impl Read for VcfReader {
-	fn read(&mut self, record: &mut Record) -> Option<Result<()>> {
-	    match self {
-		VcfReader::Std(r) => r.read(record),
-		VcfReader::Indexed(r) => r.read(record)
-	    }
+    match (vcf.as_str(), region) {
+	("-", "") => {
+	    let mut rdr = Reader::from_stdin().expect("could not read vcf from stdin");
+	    let hv = rdr.header().clone();
+	    process_vcf(&mut rdr, &hv, &mut tbxreader, lb, ub, whl)
 	}
-
-	fn records(&mut self) -> Records<'_, Self>  {
-	    match self {
-		VcfReader::Std(r) => r.records(),
-		VcfReader::Indexed(r) => r.records()
-	    }
+	("-", _) => panic!("can't specify region when reading from stdin"),
+	(p, "") => {
+	    let mut rdr = Reader::from_path(p).expect(&format!("could not open {}", p));
+	    let hv = rdr.header().clone();
+	    process_vcf(&mut rdr, &hv, &mut tbxreader, lb, ub, whl)
 	}
-	fn header(&self) -> &HeaderView {
-	    match self {
-		VcfReader::Std(r) => r.header(),
-		VcfReader::Indexed(r) => r.header()
-	    }
+	(p, r) => {
+	    let mut rdr = IndexedReader::from_path(p).expect(&format!("could not open {}", p));
+	    let hv = rdr.header().clone();
+	    let (contig, start, end) = utils::parse_region(r);
+	    let rid = hv.name2rid(contig.as_bytes()).expect(&format!("contig {} not in vcf header", contig));
+	    rdr.fetch(rid, start as u64, Some(end as u64)).expect(&format!("could not fetch region {}", r));
+	    process_vcf(&mut rdr, &hv, &mut tbxreader, lb, ub, whl)
 	}
-
-	fn empty_record(&self) -> Record {
-	    match self {
-		VcfReader::Std(r) => r.empty_record(),
-		VcfReader::Indexed(r) => r.empty_record()
-	    }
-	}
-	
-	fn set_threads(&mut self, n_threads: usize) -> Result<()> {
-	    match self {
-		VcfReader::Std(r) => r.set_threads(n_threads),
-		VcfReader::Indexed(r) => r.set_threads(n_threads)
-	    }
-	}
-		
     }
-    
-    let mut vcfreader:VcfReader = match (vcf, region) {
-	( vcfn, "" ) => if vcfn == "-" { VcfReader::Std(Reader::from_stdin().unwrap()) }
-	else {VcfReader::Std(Reader::from_path(vcfn).unwrap())},
-	(vcfn, _ ) => if vcfn == "-" {
-	    panic!("can't specify region when reading from stdin")
-	} else {
-	    VcfReader::Indexed(IndexedReader::from_path(vcf).unwrap())
-	}
-    };
-    
-    let header_view = vcfreader.header().clone();
-    if region != "" {
-        let (contig, start, end) = utils::parse_region(region);
-        let rid = header_view.name2rid(contig.as_bytes()).unwrap();
-        vcfreader
-            .fetch(rid, start as u64, Some(end as u64))
-            .unwrap();
-    }
-    process_vcf(&mut vcfreader, &header_view, &mut tbxreader,  lb, ub, whl);
+    .expect("error while processing vcf");
     let elapsed = now.elapsed();
     eprintln!("[scan-vcf] elapsed:{}sec(s)", elapsed.as_secs_f32());
 }
@@ -148,9 +106,12 @@ fn process_vcf<R:Read>(vcf: &mut R, header_view:&HeaderView, tbxreader: &mut tbx
     for record in vcf.records() {
 	let record = record?;
 	let lr = 2 == record.alleles().len();
-        let l1 = 1 == record.alleles()[0].len();
-        let l2 = 1 == record.alleles()[1].len();
-	let gt = record.genotypes().expect("error in reading GT").get(0);
+        let l1 = lr && 1 == record.alleles()[0].len();
+        let l2 = lr && 1 == record.alleles()[1].len();
+	let gt = match record.genotypes() {
+	    Ok(gts) => gts.get(0),
+	    Err(_) => continue
+	};
 	let l3 = (&format!("{gt}") != "1/1") && (&format!("{gt}") != "1|1");
 	let l4 = record.qual() >= 20.0; 
 	if lr && l1 && l2 && l3 && l4 {
@@ -164,7 +125,12 @@ fn process_vcf<R:Read>(vcf: &mut R, header_view:&HeaderView, tbxreader: &mut tbx
 	    let a1 = record.alleles()[0][0] as char ;
 	    let a2 = record.alleles()[1][0] as char ;
             let pos = record.pos() as u64 + 1;
-            let msmaybe = utils::get_bedmethyl_slice(tbxreader, &contig, pos - 100, pos + 100);
+	    let wstart = pos.saturating_sub(whl as u64);
+	    let wend = pos + whl as u64;
+            let msmaybe = utils::get_bedmethyl_slice(tbxreader,
+					   &contig,
+					   wstart,
+					   wend);
 	    let ms = match msmaybe {
 		Ok(ms) => ms,
 		Err(_) => continue
@@ -173,8 +139,8 @@ fn process_vcf<R:Read>(vcf: &mut R, header_view:&HeaderView, tbxreader: &mut tbx
             if ms.depth.len() >= 3 && meanmeth >= lb && meanmeth <= ub {
 		println!(
                     "{contig}\t{}\t{}\t{pos}\t{a1}\t{a2}\t{:.4}\t{}",
-                    pos - whl as u64,
-                    pos + whl as u64,
+                    wstart,
+                    wend,
                     meanmeth,
                     ms.depth.len(),
                 );
