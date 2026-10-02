@@ -1,10 +1,12 @@
 use crate::utils;
 
-use rust_htslib::bcf::IndexedReader;
-use rust_htslib::bcf::Read;
+use rust_htslib::bcf::{IndexedReader, Read, Reader};
 use rust_htslib::tbx;
 use rust_htslib::bcf::header::HeaderView;
-use rust_htslib::tbx::Reader;
+use rust_htslib::bcf::Record;
+use rust_htslib::bcf::Records;
+use rust_htslib::errors::Result;
+//use rust_htslib::tbx::Reader;
 use std::time;
 
 pub fn scan_vcf(args: &[String]) {
@@ -71,7 +73,62 @@ OPTIONS:
     eprintln!("methfn:{}", methfn);
     let mut tbxreader =
         tbx::Reader::from_path(&methfn).expect(&format!("Could not open {}", methfn));
-    let mut vcfreader = IndexedReader::from_path(vcf).expect("Error opening vcf file");
+    enum VcfReader {
+	Std(Reader),
+	Indexed(IndexedReader)
+    }
+
+    impl VcfReader {
+    }
+
+    
+    impl Read for VcfReader {
+	fn read(&mut self, record: &mut Record) -> Option<Result<()>> {
+	    match self {
+		VcfReader::Std(r) => r.read(record),
+		VcfReader::Indexed(r) => r.read(record)
+	    }
+	}
+
+	fn records(&mut self) -> Records<'_, Self>  {
+	    match self {
+		VcfReader::Std(r) => r.records(),
+		VcfReader::Indexed(r) => r.records()
+	    }
+	}
+	fn header(&self) -> &HeaderView {
+	    match self {
+		VcfReader::Std(r) => r.header(),
+		VcfReader::Indexed(r) => r.header()
+	    }
+	}
+
+	fn empty_record(&self) -> Record {
+	    match self {
+		VcfReader::Std(r) => r.empty_record(),
+		VcfReader::Indexed(r) => r.empty_record()
+	    }
+	}
+	
+	fn set_threads(&mut self, n_threads: usize) -> Result<()> {
+	    match self {
+		VcfReader::Std(r) => r.set_threads(n_threads),
+		VcfReader::Indexed(r) => r.set_threads(n_threads)
+	    }
+	}
+		
+    }
+    
+    let mut vcfreader:VcfReader = match (vcf, region) {
+	( vcfn, "" ) => if vcfn == "-" { VcfReader::Std(Reader::from_stdin().unwrap()) }
+	else {VcfReader::Std(Reader::from_path(vcfn).unwrap())},
+	(vcfn, _ ) => if vcfn == "-" {
+	    panic!("can't specify region when reading from stdin")
+	} else {
+	    VcfReader::Indexed(IndexedReader::from_path(vcf).unwrap())
+	}
+    };
+    
     let header_view = vcfreader.header().clone();
     if region != "" {
         let (contig, start, end) = utils::parse_region(region);
@@ -86,7 +143,7 @@ OPTIONS:
 }
 
 
-fn process_vcf<R:Read>(vcf: &mut R, header_view:&HeaderView, tbxreader: &mut Reader, lb:f32, ub:f32, whl:usize) ->
+fn process_vcf<R:Read>(vcf: &mut R, header_view:&HeaderView, tbxreader: &mut tbx::Reader, lb:f32, ub:f32, whl:usize) ->
     Result<(), Box<dyn std::error::Error>> {
     for record in vcf.records() {
 	let record = record?;
