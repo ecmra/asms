@@ -3,10 +3,7 @@ use crate::utils;
 use rust_htslib::bcf::{IndexedReader, Read, Reader};
 use rust_htslib::tbx;
 use rust_htslib::bcf::header::HeaderView;
-use rust_htslib::bcf::Record;
-use rust_htslib::bcf::Records;
 use rust_htslib::errors::Result;
-//use rust_htslib::tbx::Reader;
 use std::time;
 
 pub fn scan_vcf(args: &[String]) {
